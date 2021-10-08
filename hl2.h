@@ -21,6 +21,7 @@
 
 #include <gtk/gtk.h>
 
+#include "peak_detect.h"
 #include "ringbuffer.h"
 
 
@@ -39,7 +40,7 @@
 // HL2 pa bias (x2 digi pots in same ic), also used for EEPROM
 #define ADDR_MCP4662 0x2c
 // HL2-MRF101 ADC for pa current and temperature
-#define ADDR_MAX11645 0x36
+#define ADDR_MRF101 0x2A
 // Versaclock 5, main HL2 clock generator/distribution
 #define ADDR_VERSA5 0xD4
 
@@ -55,7 +56,7 @@
 #define HL2_SYNC_MASK_PRIMARY 0x7D
 #define HL2_SYNC_MASK_SECONDARY 0x7E
 
-
+#define CURRENT_PEAK_BUF_SIZE 40
 
 
 typedef struct _hermeslite2 {
@@ -85,6 +86,9 @@ typedef struct _hermeslite2 {
   gboolean underflow;
 
   gdouble mrf101_temp;
+  gdouble mrf101_current;
+  gdouble current_peak;
+  PEAKDETECTOR *current_peak_buf;
 
   //fpga generated clocks - removes noise on 160m
   gboolean psu_clk;

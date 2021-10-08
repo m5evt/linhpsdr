@@ -1757,7 +1757,7 @@ GtkWidget *create_vfo(RECEIVER *rx) {
   gtk_layout_put(GTK_LAYOUT(v->vfo),v->xit_b,x,y);
   x=x+40;
 
-  if(radio->transmitter!=NULL && radio->transmitter->rx==rx) {
+  if(radio->transmitter!=NULL) {
     sprintf(temp,"%+05ld",radio->transmitter->xit); 
   } else {
     sprintf(temp,"%+05ld",0L); 

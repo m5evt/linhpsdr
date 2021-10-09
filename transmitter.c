@@ -1725,8 +1725,8 @@ g_print("create_transmitter: channel=%d\n",channel);
   transmitter_set_mode(tx,mode);
 
   tx->tx_info = NULL;
+  tx->num_tx_info_meters = 0; 
   
-  //tx->tx_info_meter = 0;
   for (int i = 0; i <= NUM_TX_METERS; i++) {
     tx->tx_info_meter[i] = NULL;
   }

@@ -62,6 +62,7 @@ typedef struct _transmitter {
   
   TXMETER *tx_info_meter[NUM_TX_METERS+1];
   GtkWidget *tx_info;
+  gint num_tx_info_meters;
 
   gdouble drive;
   gdouble tune_percent;

@@ -93,7 +93,7 @@ static gboolean mrf101data_timer_timer_cb(void *data) {
 
 void HL2mrf101DataInit(HERMESLITE2 *hl2) {
   hl2->mrf101data_timer_id = g_timeout_add(200,mrf101data_timer_timer_cb,(gpointer)hl2); 
-  HL2i2cQueueWrite(hl2, I2C2_READ, ADDR_MRF101, 0x01, 0x00);
+  HL2i2cQueueWrite(hl2, I2C2_WRITE, ADDR_MRF101, 0x02, 0x08);
 }
 
 void HL2mrf101SetBias(HERMESLITE2 *hl2) {
@@ -277,24 +277,15 @@ void HL2i2cStoreValue(HERMESLITE2 *hl2, int raddr, long rdata) {
       //g_print("ADC return val %x\n", rdata);
        
       pa_temp_hex = rdata  & 0xFF;
-      pa_current_hex = (((rdata >> 8)  & 0xFF) << 2) & 0x0FFF;
-      //g_print("ADC return val %x\n", pa_current_hex);
-     
-       
+      pa_current_hex = (rdata >> 8)  & 0xFF;
       
-      double this_temperature = ((double)pa_temp_hex * (3.3 / 1024)) * 100;
+      double this_temperature = (double)pa_temp_hex;
       hl2->mrf101_temp = this_temperature; 
 
-      double this_current = ((double)pa_current_hex * (3.3 /1024) / 20) / 0.033;
+      double this_current = ((double)pa_current_hex / 255) *5;
       hl2->mrf101_current = this_current; 
 
-      if (this_temperature > 40) g_print("ADC return val %x\n", rdata);
-      //g_print("PA current: %.2f A\n", this_current);
-      //double alpha = 0.1;
       hl2->current_peak = get_peak(hl2->current_peak_buf, hl2->mrf101_current);
-      //hl2->mrf101_temp = (alpha * this_temperature) + (1 - alpha) * hl2->mrf101_temp;      
-      
-      //g_print("PA temp: %.1f deg C\n", hl2->mrf101_temp);
       break;
       
     default:

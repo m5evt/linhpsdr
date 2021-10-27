@@ -105,7 +105,7 @@ void save_xvtr () {
   }
 }
 
-void update_receiver(int band,gboolean error) {
+void update_receiver(int band) {
   int i;
   RECEIVER *rx;
   gboolean saved_ctun;
@@ -149,7 +149,7 @@ void min_frequency_cb(GtkEditable *editable,gpointer user_data) {
   BAND *xvtr=band_get_band(band);
   const char* minf=gtk_entry_get_text(GTK_ENTRY(min_frequency[band]));
   xvtr->frequencyMin=(long long)(atof(minf)*1000000.0);
-  update_receiver(band,FALSE);
+  update_receiver(band);
 }
 
 void max_frequency_cb(GtkEditable *editable,gpointer user_data) {
@@ -157,7 +157,7 @@ void max_frequency_cb(GtkEditable *editable,gpointer user_data) {
   BAND *xvtr=band_get_band(band);
   const char* maxf=gtk_entry_get_text(GTK_ENTRY(max_frequency[band]));
   xvtr->frequencyMin=(long long)(atof(maxf)*1000000.0);
-  update_receiver(band,FALSE);
+  update_receiver(band);
 }
 
 void lo_frequency_cb(GtkEditable *editable,gpointer user_data) {
@@ -165,7 +165,17 @@ void lo_frequency_cb(GtkEditable *editable,gpointer user_data) {
   BAND *xvtr=band_get_band(band);
   const char* lof=gtk_entry_get_text(GTK_ENTRY(lo_frequency[band]));
   xvtr->frequencyLO=(long long)(atof(lof)*1000000.0);
-  update_receiver(band,FALSE);
+  update_receiver(band);
+}
+
+void update_lo_frequency(int band, long long new_lo) {
+  BAND *xvtr=band_get_band(band);
+
+  if(radio->dialog!=NULL) {
+    char temp[32];
+    sprintf(temp,"%.6f", (double)(new_lo / 1000000.0));
+    gtk_entry_set_text(GTK_ENTRY(lo_frequency[band]), temp);
+  }
 }
 
 void lo_error_cb(GtkEditable *editable,gpointer user_data) {
@@ -173,13 +183,13 @@ void lo_error_cb(GtkEditable *editable,gpointer user_data) {
   BAND *xvtr=band_get_band(band);
   const char* errorf=gtk_entry_get_text(GTK_ENTRY(lo_error[band]));
   xvtr->errorLO=atoll(errorf);
-  update_receiver(band,TRUE);
+  update_receiver(band);
 }
 
 void lo_error_update(int band,long long offset) {
   BAND *xvtr=band_get_band(band);
   xvtr->errorLO=xvtr->errorLO+offset;
-  update_receiver(band,TRUE);
+  update_receiver(band);
   if(radio->dialog!=NULL) {
     char temp[32];
     sprintf(temp,"%lld",xvtr->errorLO);
@@ -191,7 +201,38 @@ static void pa_xvtr_value_changed_cb(GtkWidget *widget, gpointer user_data) {
   int band = GPOINTER_TO_INT(user_data);
   BAND *xvtr=band_get_band(band);
   xvtr->pa_calibration = gtk_spin_button_get_value(GTK_SPIN_BUTTON(widget));
-  update_receiver(band,FALSE);    
+  update_receiver(band);    
+}
+static void xvtr_pa_disable_changed_cb(GtkWidget *widget, gpointer user_data) {
+  int band = GPOINTER_TO_INT(user_data);
+  BAND *xvtr=band_get_band(band);
+  xvtr->disablePA = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+  update_receiver(band);    
+}
+
+// HL2 clock 2 output can be used for transverters
+// However, testing has shown that if the Versaclock IC sets the 
+// frequency NOT in integer mode, spurs occur. This allows the option
+// for linHPSDR to calculate the LO frequency based in an integer divisor
+// for the versaclock PLL.
+static void cl2_mode_cb(GtkWidget *widget, gpointer data) {
+  HERMESLITE2 *hl2 = (HERMESLITE2 *)data;
+  hl2->cl2_integer_mode = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+ 
+  // Update display and disable input of LO freq while in 
+  // integer mode for CL2
+  for(int i= BANDS; i < BANDS+XVTRS; i++) {
+    gtk_widget_set_sensitive(lo_frequency[i], !hl2->cl2_integer_mode);
+    BAND *xvtr=band_get_band(i);
+
+    char temp[32];
+    long long new_lo_freq = 0;
+    if ((xvtr->frequencyLO > 0) && (hl2->cl2_integer_mode)) {
+      // Calculate nearest LO value for integer divisor
+      new_lo_freq = HL2cl2CalculateNearest(hl2, xvtr->frequencyLO);
+      update_lo_frequency(i, new_lo_freq);
+    }
+  }
 }
 
 GtkWidget *create_xvtr_dialog(RADIO *radio) {
@@ -204,6 +245,18 @@ GtkWidget *create_xvtr_dialog(RADIO *radio) {
   gtk_grid_set_column_spacing (GTK_GRID(grid),10);
 
   row=0;
+  col=0;
+
+  if (radio->hl2 != NULL) {
+    GtkWidget *cl2_label = gtk_label_new("Use CL2 in integer mode");
+    gtk_grid_attach(GTK_GRID(grid), cl2_label, col++, row, 1, 1);
+    GtkWidget *cl2 = gtk_check_button_new();
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(cl2), radio->hl2->cl2_integer_mode);
+    gtk_grid_attach(GTK_GRID(grid), cl2, col++, row, 1, 1);
+    g_signal_connect(cl2, "toggled", G_CALLBACK(cl2_mode_cb), radio->hl2);
+  }
+
+  row++;
   col=0;
 
   GtkWidget *label=gtk_label_new("Title");
@@ -266,6 +319,7 @@ GtkWidget *create_xvtr_dialog(RADIO *radio) {
     disable_pa[i]=gtk_check_button_new();
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(disable_pa[i]),xvtr->disablePA);
     gtk_grid_attach(GTK_GRID(grid),disable_pa[i],col++,row,1,1);
+    g_signal_connect(disable_pa[i], "toggled", G_CALLBACK(xvtr_pa_disable_changed_cb), GINT_TO_POINTER(i));
 
     if (radio->hl2 != NULL) {
       pa_calibration[i] = gtk_spin_button_new_with_range(38.8,100.0,0.1);
@@ -273,13 +327,21 @@ GtkWidget *create_xvtr_dialog(RADIO *radio) {
       gtk_widget_show(pa_calibration[i]);    
       gtk_grid_attach(GTK_GRID(grid),pa_calibration[i],col++,row,1,1);
       g_signal_connect(pa_calibration[i],"changed",G_CALLBACK(pa_xvtr_value_changed_cb),GINT_TO_POINTER(i));
+
+      if (radio->hl2->cl2_integer_mode == TRUE) {
+        g_print("Set disable pa false\n");
+        gtk_widget_set_sensitive(disable_pa[i], FALSE);
+      }
+      else {
+        g_print("Why here?\n");
+      }
     }
 
     row++;
     col=0;
 
   }
-
+  
   gtk_widget_show_all(grid);
 
   return grid;

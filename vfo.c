@@ -1258,7 +1258,6 @@ static gboolean agcgain_scale_scroll_event_cb(GtkWidget *widget,GdkEventScroll *
 //********************************************************************************** 
 //********************************************************************************** 
 static gboolean squelch_press_cb(GtkWidget *widget,GdkEventButton *event,gpointer data) {
-  g_print("CB sql\n");
   RECEIVER *rx=(RECEIVER *)data;
   pressed=TRUE;
   last_x=event->x;
@@ -1267,7 +1266,6 @@ static gboolean squelch_press_cb(GtkWidget *widget,GdkEventButton *event,gpointe
 }
 
 static gboolean squelch_scale_motion_notify_event_cb(GtkWidget *widget, GdkEventMotion *event, gpointer data) {
-  g_print("Press sql\n");
   RECEIVER *rx=(RECEIVER *)data;
   if(pressed) {
     has_moved=TRUE;
@@ -1283,7 +1281,6 @@ static gboolean squelch_scale_motion_notify_event_cb(GtkWidget *widget, GdkEvent
 }
 
 static gboolean squelch_release_cb(GtkWidget *widget,GdkEventButton *event,gpointer data) {
-  g_print("Release sql\n");
   RECEIVER *rx=(RECEIVER *)data;
   if(has_moved) {
     gdouble moved=event->x-last_x;
@@ -1304,7 +1301,6 @@ static gboolean squelch_release_cb(GtkWidget *widget,GdkEventButton *event,gpoin
 }
 
 static gboolean squelch_scale_scroll_event_cb(GtkWidget *widget,GdkEventScroll *event,gpointer data) {
-  g_print("Scroll sql\n");
   RECEIVER *rx=(RECEIVER *)data;
   VFO_DATA *v=(VFO_DATA *)g_object_get_data((GObject *)rx->vfo,"vfo_data");
   if(event->direction==GDK_SCROLL_DOWN) {

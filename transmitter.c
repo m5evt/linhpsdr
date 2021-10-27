@@ -1219,7 +1219,6 @@ void full_tx_buffer(TRANSMITTER *tx, gboolean force_send) {
     
     protocol1_iq_samples(isample, qsample);
   }
-  //if (buf_underflow > 0) g_print("buff\n");
 }
 
 

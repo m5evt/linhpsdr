@@ -324,8 +324,9 @@ void HL2i2cProcessReturnValue(HERMESLITE2 *hl2, unsigned char c0,
 void HL2cl2Enable(HERMESLITE2 *hl2) {
   g_print("HL2: Enable CL2 %ld \n", hl2->clock2_freq);
   // VCO = 38.4*68 = 2611.2 MHz 
+  //unsigned int divisor = (2611200000 / (double)hl2->clock2_freq) / 2;
   double divisor = (2611200000 / (double)hl2->clock2_freq) / 2;
-  g_print("-----Divisor CL2 %lf \n", divisor);  
+  g_print("-----Divisor CL2 %i \n", divisor);  
   
   unsigned int addr = ADDR_VERSA5 >> 1;
   unsigned int div = (unsigned int)(divisor * pow(2, 24) + 0.1);

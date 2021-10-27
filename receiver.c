@@ -1153,6 +1153,15 @@ void set_filter(RECEIVER *rx,int low,int high) {
 void set_deviation(RECEIVER *rx) {
 fprintf(stderr,"set_deviation: %d\n",rx->deviation);
   SetRXAFMDeviation(rx->channel, (double)rx->deviation);
+  set_squelch(rx);
+}
+
+void set_squelch(RECEIVER *rx) {
+  double fm_sq=pow(10.0, -2.0*rx->squelch);
+  SetRXAFMSQThreshold(rx->channel, fm_sq);
+  rx->squelch_enable = TRUE;
+  SetRXAFMSQRun(rx->channel, rx->squelch_enable);
+  g_print("Set squelch %f %f\n", rx->squelch, fm_sq);
 }
 
 void calculate_display_average(RECEIVER *rx) {
@@ -1695,6 +1704,9 @@ g_print("create_receiver: channel=%d frequency_min=%ld frequency_max=%ld\n", cha
   }
 
   rx->deviation=2500;
+  rx->squelch_enable = FALSE;
+  rx->squelch = 0.1;
+
   rx->filter_a=F5;
   rx->lo_a=0;
   rx->error_a=0;

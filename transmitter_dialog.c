@@ -47,7 +47,7 @@
 static GtkWidget *microphone_frame;
 static GtkWidget *tx_spin_low;
 static GtkWidget *tx_spin_high;
-
+static GtkWidget *tx_latency;
 
 /*
 static gboolean close_cb (GtkWidget *widget, GdkEventButton *event, gpointer data) {
@@ -96,7 +96,7 @@ static void microphone_choice_cb(GtkComboBox *widget,gpointer data) {
       radio->local_microphone=FALSE;
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (radio->transmitter->local_microphone_b),FALSE);
     }
-  } else {
+
     i=gtk_combo_box_get_active(widget);
     if(radio->microphone_name!=NULL) {
       g_free(radio->microphone_name);
@@ -226,6 +226,11 @@ static void ctcss_frequency_cb(GtkWidget *widget, gpointer data) {
   TRANSMITTER *tx=(TRANSMITTER *)data;
   int i=gtk_combo_box_get_active(GTK_COMBO_BOX(widget));
   transmitter_set_ctcss(tx,tx->ctcss_enabled,i);
+}
+
+static void tx_latency_cb(GtkWidget *widget, gpointer data) {
+  RADIO *r = (RADIO*)data;
+  r->hl2->hl2_tx_buffer_size = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widget)); 
 }
 
 void update_transmitter_dialog(TRANSMITTER *tx) {
@@ -557,6 +562,30 @@ g_print("%s: tx=%d\n",__FUNCTION__,tx->channel);
   gtk_scale_add_mark(GTK_SCALE(high_scale),9.0,GTK_POS_LEFT,NULL);
   gtk_scale_add_mark(GTK_SCALE(high_scale),12.0,GTK_POS_LEFT,NULL);
   gtk_scale_add_mark(GTK_SCALE(high_scale),15.0,GTK_POS_LEFT,"15dB");
+
+  if (radio->hl2 != NULL) {
+  
+  row += 3;
+
+  GtkWidget *latency_frame=gtk_frame_new("TX Buffer Latency");
+  GtkWidget *latency_grid=gtk_grid_new();
+  gtk_grid_set_row_homogeneous(GTK_GRID(latency_grid),TRUE);
+  gtk_grid_set_column_homogeneous(GTK_GRID(latency_grid),FALSE);
+  gtk_grid_set_column_spacing(GTK_GRID(latency_grid),10);
+  gtk_container_add(GTK_CONTAINER(latency_frame),latency_grid);
+  gtk_grid_attach(GTK_GRID(grid),latency_frame,col,row++,1,1);
+
+  GtkWidget *fifo_label=gtk_label_new("Size (ms):");
+  gtk_widget_show(fifo_label);
+  gtk_grid_attach(GTK_GRID(latency_grid),fifo_label,1,1,1,1);
+
+  tx_latency = gtk_spin_button_new_with_range(10, 60,1.0);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(tx_latency),(double)radio->hl2->hl2_tx_buffer_size);
+  gtk_grid_attach(GTK_GRID(latency_grid),tx_latency,2,1,1,1);
+
+  g_signal_connect(tx_latency, "value_changed", G_CALLBACK(tx_latency_cb), radio);
+
+  } 
 
   update_transmitter_dialog(tx);
 

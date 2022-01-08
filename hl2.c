@@ -65,7 +65,7 @@ static gboolean qos_timer_cb(void *data) {
 
   HERMESLITE2 *hl2=(HERMESLITE2 *)data;
 
-  if (hl2->late_packets > 7) {
+  if ((hl2->late_packets > 7) && (radio->cwdaemon)) {
     g_print("Reset audio\n");    
     RECEIVER *tx_receiver = radio->transmitter->rx;
     if(tx_receiver!=NULL) {    

@@ -1460,11 +1460,11 @@ g_print("create_radio for %s %d\n",d->name,d->device);
   
   r->dialog=NULL;
 
-  radio_restore_state(r);
-
   if (radio->discovered->device==DEVICE_HERMES_LITE2) {
     r->hl2 = create_hl2();
   }
+ 
+  radio_restore_state(r);
 
   radio_change_region(r);
 

@@ -39,6 +39,7 @@ typedef struct _vfo_data {
   GtkWidget *afgain_scale;
   GtkWidget *squelch_scale;
   GtkWidget *agcgain_scale;
+  GtkWidget *squelch_label;
   GtkWidget *lock_b;
   GtkWidget *mode_b;
   GtkWidget *filter_b;

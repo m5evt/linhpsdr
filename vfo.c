@@ -1659,9 +1659,9 @@ GtkWidget *create_vfo(RECEIVER *rx) {
   x=x+105;
   y=21;
   
-  GtkWidget *squelch_label=gtk_label_new("SQL");
-  gtk_widget_set_name(squelch_label,"squelch-text");
-  gtk_layout_put(GTK_LAYOUT(v->vfo),squelch_label,x,y);
+  v->squelch_label=gtk_label_new("SQL");
+  gtk_widget_set_name(v->squelch_label,"squelch-text");
+  gtk_layout_put(GTK_LAYOUT(v->vfo),v->squelch_label,x,y);
   
   x+=22;
   y=18;
@@ -1993,6 +1993,12 @@ void update_vfo(RECEIVER *rx) {
   // update FM squelch
   if(rx->mode_a==FMN) {
     gtk_level_bar_set_value(GTK_LEVEL_BAR(v->squelch_scale),rx->squelch);
+    gtk_label_set_text(GTK_LABEL(v->squelch_label),"SQL");
+    gtk_widget_show(v->squelch_scale);
+  }
+  else {
+      gtk_label_set_text(GTK_LABEL(v->squelch_label),"");
+      gtk_widget_hide(v->squelch_scale);
   }
   // update Lock button
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(v->lock_b),rx->locked);

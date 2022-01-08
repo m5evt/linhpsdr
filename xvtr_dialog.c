@@ -328,12 +328,9 @@ GtkWidget *create_xvtr_dialog(RADIO *radio) {
       gtk_grid_attach(GTK_GRID(grid),pa_calibration[i],col++,row,1,1);
       g_signal_connect(pa_calibration[i],"changed",G_CALLBACK(pa_xvtr_value_changed_cb),GINT_TO_POINTER(i));
 
-      if (radio->hl2->cl2_integer_mode == TRUE) {
+      if (radio->hl2->cl2_integer_mode) {
         g_print("Set disable pa false\n");
         gtk_widget_set_sensitive(disable_pa[i], FALSE);
-      }
-      else {
-        g_print("Why here?\n");
       }
     }
 

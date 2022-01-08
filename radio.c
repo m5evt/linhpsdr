@@ -593,6 +593,18 @@ void frequency_changed(RECEIVER *rx) {
       }
     }  
     
+    if (radio->hl2 != NULL) {     
+      if (rx->lo_a != 0) {
+        radio->hl2->xvtr = TRUE;
+        gtk_widget_set_sensitive(add_receiver_b, FALSE);
+        HL2clock2Status(radio->hl2, TRUE, &rx->lo_a);
+      }
+      else { 
+        gtk_widget_set_sensitive(add_receiver_b, TRUE);              
+        radio->hl2->xvtr = FALSE;        
+        HL2clock2Status(radio->hl2, FALSE, &rx->lo_a);        
+      }
+    }
     
   if(rx->ctun) {
     gint64 offset;
@@ -961,7 +973,11 @@ g_print("add_receiver: no receivers available\n");
     i = -1;
   }
 
-  gtk_widget_set_sensitive(add_receiver_b,r->receivers<r->discovered->supported_receivers);
+  if (radio->hl2 != NULL) {
+    if (radio->hl2->xvtr == FALSE) {
+      gtk_widget_set_sensitive(add_receiver_b,r->receivers<r->discovered->supported_receivers);
+    }
+  }
 
   if(radio->dialog) {
     gtk_widget_destroy(radio->dialog);
@@ -1179,7 +1195,15 @@ static void create_visual(RADIO *r) {
     //gtk_style_context_add_class(gtk_widget_get_style_context(GTK_WIDGET(add_receiver_b)),"circular");
     g_signal_connect(add_receiver_b,"clicked",G_CALLBACK(add_receiver_cb),(gpointer)r);
     gtk_grid_attach(GTK_GRID(r->visual),add_receiver_b,col,row,1,1);
-    gtk_widget_set_sensitive(add_receiver_b,r->receivers<r->discovered->supported_receivers);
+
+    if (radio->hl2 != NULL) {
+      if (radio->hl2->xvtr == FALSE) {      
+        gtk_widget_set_sensitive(add_receiver_b,r->receivers<r->discovered->supported_receivers);
+      }
+      else {
+        gtk_widget_set_sensitive(add_receiver_b, FALSE);        
+      }
+    }
     row++;
   }
 

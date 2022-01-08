@@ -40,6 +40,8 @@
 #define ADDR_MCP4662 0x2c
 // HL2-MRF101 ADC for pa current and temperature
 #define ADDR_MAX11645 0x36
+// Versaclock 5, main HL2 clock generator/distribution
+#define ADDR_VERSA5 0xD4
 
 
 #define MCP4662_BIAS0 0x02
@@ -93,6 +95,7 @@ typedef struct _hermeslite2 {
   RINGBUFFERL *one_shot_queue;
 
   gboolean cl2_enabled;
+  gboolean cl2_integer_mode;
 
   GMutex i2c_mutex;  
 } HERMESLITE2;
@@ -100,9 +103,7 @@ typedef struct _hermeslite2 {
 extern HERMESLITE2 *create_hl2(void);
 
 extern void HL2i2cQueueWrite(HERMESLITE2 *hl2, int readwrite, unsigned int addr, unsigned int command, unsigned int value);
-
 extern int HL2i2cWriteQueued(HERMESLITE2 *hl2);
-
 extern int hl2_get_txbuffersize(HERMESLITE2 *hl2);
 
 extern void HL2mrf101SetBias(HERMESLITE2 *hl2);
@@ -115,7 +116,10 @@ extern unsigned int HL2i2cSendTargetAddr(HERMESLITE2 *hl2);
 extern unsigned int HL2i2cSendCommand(HERMESLITE2 *hl2);
 extern int HL2i2cSendValue(HERMESLITE2 *hl2);
 
+extern void HL2clock2Status(HERMESLITE2 *hl2, gboolean xvtr_on, const long int *clock_freq);
+
 extern void HL2i2cProcessReturnValue(HERMESLITE2 *hl2, unsigned char c0,
                                      unsigned char c1, unsigned char c2, unsigned char c3, unsigned char c4);
 
+extern long long HL2cl2CalculateNearest(HERMESLITE2 *hl2, long long lo_freq);
 #endif

@@ -104,6 +104,8 @@ typedef struct _receiver {
   gint filter_low_a;
   gint filter_high_a;
   gint deviation;
+  gboolean squelch_enable;
+  gdouble squelch;
 
   gint filter_low_b;
   gint filter_high_b;
@@ -309,6 +311,7 @@ extern void receiver_band_changed(RECEIVER *rx,int band);
 extern void receiver_xvtr_changed(RECEIVER *rx);
 extern void set_filter(RECEIVER *rx,int low,int high);
 extern void set_deviation(RECEIVER *rx);
+extern void set_squelch(RECEIVER *rx);
 
 extern void update_noise(RECEIVER *rx);
 

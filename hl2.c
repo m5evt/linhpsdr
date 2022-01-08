@@ -320,42 +320,131 @@ void HL2i2cProcessReturnValue(HERMESLITE2 *hl2, unsigned char c0,
   HL2i2cStoreValue(hl2, raddr, rdata); 
 }
 
+
+long long HL2cl2CalculateNearest(HERMESLITE2 *hl2, long long lo_freq) {
+  g_print("HL2: Calculate nearest LO %lld \n", lo_freq);
+  // VCO = 38.4*68 = 2611.2 MHz 
+  //unsigned int divisor = (2611200000 / (double)hl2->clock2_freq) / 2;
+  int divisor = (2611200000 / (double)lo_freq) / 2;
+  g_print("----- Use divisor CL2 %i \n", divisor);  
+
+  long long new_lo = (2611200000 / divisor) / 2;
+  
+  g_print("HL2: New LO %lld\n", new_lo);
+  return new_lo;
+}
+
+// Versaclock CL2 output enable
+void HL2cl2Enable(HERMESLITE2 *hl2) {
+  g_print("HL2: Enable CL2 %ld \n", hl2->clock2_freq);
+  // VCO = 38.4*68 = 2611.2 MHz 
+  
+  unsigned int div = 1;
+  if (hl2->cl2_integer_mode) {
+    unsigned int divisor = (2611200000 / (double)hl2->clock2_freq) / 2;
+    div = (unsigned int)(divisor * pow(2, 24) + 0.1);
+    g_print("-----Divisor CL2 %i \n", divisor);  
+  } 
+  else {
+    double divisor = (2611200000 / (double)hl2->clock2_freq) / 2;
+    div = (unsigned int)(divisor * pow(2, 24) + 0.1);
+    g_print("-----Divisor CL2 %f \n", divisor);  
+  }
+  
+  unsigned int addr = ADDR_VERSA5 >> 1;
+  unsigned int intgr = div >> 24;
+  unsigned int frac = (div & 0xFFFFFF) << 2;
+  
+  printf("frac %i\n", frac);
+  // Clock2 CMOS1 output, 3.3V
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x62, 0x3b);  
+  // Disable aux output on clock 1
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x2c, 0x00);   
+  // Use divider for clock2
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x31, 0x81);  
+  
+  // Integer portion
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x3d, intgr >> 4);  
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x3e, ((intgr << 4) & 0xFF));    
+    
+  // Fractional portion
+  // [29:22]
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x32, frac >> 24);    
+  // [21:14]
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x33, frac >> 16);    
+  // [13:6]
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x34, frac >> 8);    
+  // [5:0] and disable ss
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x35, (frac & 0xFF)<<2);    
+  
+  //self.WriteVersa5(0x63,0x01)		# Enable clock2
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x63, 0x01);    
+}
+
+void HL2cl2Disable(HERMESLITE2 *hl2) {
+  g_print("-----HL2: Disable CL2\n"); 
+  
+  int addr = ADDR_VERSA5 >> 1;
+  // Disable divider output for clock2
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x31, 0x80);   
+  // Disable clock2 output      
+  HL2i2cQueueWrite(hl2, I2C1_WRITE, addr, 0x63, 0x00);     
+}
+
+void HL2clock2Status(HERMESLITE2 *hl2, gboolean xvtr_on, const long int *clock_freq) {
+
+  if ((xvtr_on) && (hl2->cl2_enabled == FALSE)) { 
+    hl2->clock2_freq = *clock_freq;
+    HL2cl2Enable(hl2);
+    hl2->cl2_enabled = TRUE;
+  }
+  else if ((xvtr_on == FALSE) && (hl2->cl2_enabled == TRUE)) {
+    HL2cl2Disable(hl2);
+    hl2->cl2_enabled = FALSE;
+  }
+}
+
 HERMESLITE2 *create_hl2(void) {
   HERMESLITE2 *hl2=g_new0(HERMESLITE2,1);
   
   hl2->one_shot_queue = create_long_ringbuffer(HL2_I2C_QUEUESIZE, 0);
-    
+
+  // HL2 i2c read/write
   hl2->addr_waiting_for = 0;
   hl2->command_waiting_for = 0;
-  
+ 
+  // MRF101 PA related
   hl2->mrf101_bias_enable = FALSE;
   hl2->mrf101_bias_value = 0;
+  hl2->mrf101_temp = 0;
   
-  
+  if (radio->filter_board == HL2_MRF101) {
+    HL2mrf101AdcInit(hl2);      
+  }
+
+  // Diversity RX related 
   hl2->adc2_value_to_send = FALSE;
   hl2->adc2_lna_gain = 20;
   
 //  hl2->queue_busy = FALSE;  
-  
+ 
+  // HL2 QOS/QOS settings
   hl2->hl2_tx_buffer_size = 0x15;
   hl2->overflow = FALSE;
   hl2->underflow = FALSE;
-  
-  hl2->psu_clk = TRUE;
-  
   hl2->late_packets = 0;
   hl2->ep6_error_ctr = 0;
-  hl2->mrf101_temp = 0;
   hl2->qos_timer_id = g_timeout_add(5000,qos_timer_cb,(gpointer)hl2);
+  
+  hl2->psu_clk = TRUE;
 
-  if (radio->filter_board == HL2_MRF101) {
-    HL2mrf101AdcInit(hl2);      
-  }
   
-  
+  // XVTR/CL2 related 
   hl2->cl2_enabled = FALSE;
   hl2->xvtr = FALSE;
-  
+  hl2->clock2_freq = 1;
+  hl2->cl2_integer_mode = FALSE;
+
   return hl2;
 }
 

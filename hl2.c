@@ -414,10 +414,6 @@ HERMESLITE2 *create_hl2(void) {
   hl2->mrf101_bias_value = 0;
   hl2->mrf101_temp = 0;
   
-  if (radio->filter_board == HL2_MRF101) {
-    HL2mrf101AdcInit(hl2);      
-  }
-
   // Diversity RX related 
   hl2->adc2_value_to_send = FALSE;
   hl2->adc2_lna_gain = 20;

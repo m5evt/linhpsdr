@@ -126,4 +126,5 @@ extern void HL2i2cProcessReturnValue(HERMESLITE2 *hl2, unsigned char c0,
                                      unsigned char c1, unsigned char c2, unsigned char c3, unsigned char c4);
 
 extern long long HL2cl2CalculateNearest(HERMESLITE2 *hl2, long long lo_freq);
+extern void hl2_init(HERMESLITE2 *hl2);
 #endif

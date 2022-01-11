@@ -96,6 +96,14 @@ void HL2mrf101DataInit(HERMESLITE2 *hl2) {
   HL2i2cQueueWrite(hl2, I2C2_WRITE, ADDR_MRF101, 0x02, 0x1E);
 }
 
+void hl2_init(HERMESLITE2 *hl2) {
+  hl2->qos_timer_id = g_timeout_add(5000,qos_timer_cb,(gpointer)hl2);
+
+  if (radio->filter_board == HL2_MRF101) {
+    HL2mrf101DataInit(hl2);      
+  }
+}
+
 void HL2mrf101SetBias(HERMESLITE2 *hl2) {
   // Write value without saving to EEPROM
   int addr = MCP4662_BIAS0;
@@ -432,11 +440,6 @@ HERMESLITE2 *create_hl2(void) {
   hl2->current_peak = 0;
   hl2->current_peak_buf = create_peak_detector(CURRENT_PEAK_BUF_SIZE, 0);
 
-  hl2->qos_timer_id = g_timeout_add(5000,qos_timer_cb,(gpointer)hl2);
-
-  if (radio->filter_board == HL2_MRF101) {
-    HL2mrf101DataInit(hl2);      
-  }
   
   hl2->psu_clk = TRUE;
 

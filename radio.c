@@ -1476,6 +1476,8 @@ g_print("create_radio for %s %d\n",d->name,d->device);
  
   radio_restore_state(r);
 
+  if (radio->hl2 != NULL) hl2_init(r->hl2);
+
   radio_change_region(r);
 
   #ifdef CWDAEMON

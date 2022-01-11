@@ -70,9 +70,18 @@ GtkWidget *create_tx_info(TRANSMITTER *tx) {
 
   int row=0;
   int col=0;
+  // Remember, after initialisation here, filter board could change. This
+  // could cause problems in the update function.
+  // So must be set once here, then if filter board is changed, window
+  // must be closed and opened again to refresh
+  if (radio->filter_board == N2ADR) {
+    tx->num_tx_info_meters = 2;
+  }
+  else if (radio->filter_board == HL2_MRF101) {
+    tx->num_tx_info_meters = 4;
+  } 
 
-
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 4; i++) {
     tx->tx_info_meter[i] = create_tx_info_meter();
     gtk_grid_attach(GTK_GRID(grid), tx->tx_info_meter[i]->tx_meter_drawing, col, row, 1, 1);
     row++;
@@ -87,11 +96,12 @@ GtkWidget *create_tx_info(TRANSMITTER *tx) {
     // Default 100 W
     configure_meter(tx->tx_info_meter[1], "Power out", 0, 110);  
   }    
-  
       
-  //configure_meter(tx->tx_info_meter[2], "MRF101 temperature", 0, 55);  
-  //configure_meter(tx->tx_info_meter[3], "MRF101 current", 0, 6.0);  
-  
+  if (tx->num_tx_info_meters == 4) {
+    configure_meter(tx->tx_info_meter[2], "MRF101 temperature", 0, 55);  
+    configure_meter(tx->tx_info_meter[3], "MRF101 current", 0, 6.0);  
+  } 
+
   gtk_container_add(GTK_CONTAINER(content),grid);
   
   gtk_widget_show_all(dialog);
@@ -105,11 +115,13 @@ void update_tx_info(TRANSMITTER *tx) {
 
   // Power out
   update_tx_info_meter(tx->tx_info_meter[1], tx->fwd, tx->fwd_peak);  
-  
+ 
+  if (tx->num_tx_info_meters == 4) {
   // MRF101 temp
-  //update_tx_info_meter(tx->tx_info_meter[2], tx->temperature, tx->temperature);  
-  // MRF101 current
-  //update_tx_info_meter(tx->tx_info_meter[3], tx->temperature, tx->temperature);    
-  
-
+    if (radio->hl2 != NULL) {
+      update_tx_info_meter(tx->tx_info_meter[2], radio->hl2->mrf101_temp, radio->hl2->mrf101_temp);  
+      // MRF101 current
+      update_tx_info_meter(tx->tx_info_meter[3], radio->hl2->mrf101_current, radio->hl2->current_peak);    
+    } 
+  }
 }

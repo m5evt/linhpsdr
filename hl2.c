@@ -29,6 +29,7 @@
 #include "band.h"
 #include "discovered.h"
 #include "bpsk.h"
+#include "peak_detect.h"
 #include "receiver.h"
 #include "transmitter.h"
 #include "wideband.h"
@@ -85,15 +86,14 @@ static gboolean qos_timer_cb(void *data) {
 
 static gboolean mrf101data_timer_timer_cb(void *data) {
   HERMESLITE2 *hl2=(HERMESLITE2 *)data; 
-  
-  HL2i2cQueueWrite(hl2, I2C2_READ, ADDR_MAX11645, 0x01, 0x00);
+  HL2i2cQueueWrite(hl2, I2C2_READ, ADDR_MRF101, 0x01, 0x00);
   
   return TRUE;
 }
 
-void HL2mrf101AdcInit(HERMESLITE2 *hl2) {
-  //hl2->mrf101data_timer_id = g_timeout_add(200,mrf101data_timer_timer_cb,(gpointer)hl2); 
-  //HL2i2cQueueWrite(hl2, I2C_WRITE, ADDR_MAX11645, 0x82, 0x03);
+void HL2mrf101DataInit(HERMESLITE2 *hl2) {
+  hl2->mrf101data_timer_id = g_timeout_add(200,mrf101data_timer_timer_cb,(gpointer)hl2); 
+  HL2i2cQueueWrite(hl2, I2C2_WRITE, ADDR_MRF101, 0x02, 0x1E);
 }
 
 void HL2mrf101SetBias(HERMESLITE2 *hl2) {
@@ -130,12 +130,12 @@ void HL2i2cQueueWrite(HERMESLITE2 *hl2, int readwrite, unsigned int addr, unsign
   //g_print("%x\n", addr);
   combined |= (addr << 16) & 0xFFFFFFFF;
   combined |= (command << 8) & 0xFFFFFFFF;
-  g_print("command %6lx\n", combined); 
+  //g_print("command %6lx\n", combined); 
   value = value & 0xFF; 
-  g_print("value %2x\n", value);    
+  //g_print("value %2x\n", value);    
   combined |= (value) & 0xFFFFFFFF;
     
-  g_print("add to buffer %6lx\n", combined);
+  //g_print("add to buffer %6lx\n", combined);
   
   g_mutex_lock(&hl2->i2c_mutex);
   queue_put(hl2->one_shot_queue, combined);
@@ -240,6 +240,7 @@ void HL2i2cStoreValue(HERMESLITE2 *hl2, int raddr, long rdata) {
   
   int bias = 0; 
   long pa_temp_hex = 0; 
+  long pa_current_hex = 0;
   switch(hl2->addr_waiting_for & 0x3F) {
     case ADDR_MCP4662:
       switch(((hl2->command_waiting_for >> 4) & 0xff)) {
@@ -272,24 +273,19 @@ void HL2i2cStoreValue(HERMESLITE2 *hl2, int raddr, long rdata) {
       }    
       g_print("HL2-MRF101 Bias %d\n", hl2->mrf101_bias_value );
       break;
-    case ADDR_MAX11645:
+    case ADDR_MRF101:
       //g_print("ADC return val %x\n", rdata);
+       
+      pa_temp_hex = rdata  & 0xFF;
+      pa_current_hex = (rdata >> 8)  & 0xFF;
       
-      //combined |= (addr << 16) & 0xFFFFFFFF;
-      //g_print("addr %6lx\n", combined);
-      //combined |= (command << 8) & 0xFFFFFFFF;
-  
-      pa_temp_hex = (((rdata >> 16) & 0xFF) << 8) & 0x0F00;
-      pa_temp_hex |= (rdata >> 24) & 0xFF;
-      //g_print("ADC return val %x\n", pa_temp_hex);
-      
-      double this_temperature = ((double)pa_temp_hex * (3.26 / 4096)) * 100;
-      
-      double alpha = 0.1;
-      hl2->mrf101_temp = (alpha * this_temperature) + (1 - alpha) * hl2->mrf101_temp;      
-      
-      
-      g_print("PA temp: %.1f deg C\n", hl2->mrf101_temp);
+      double this_temperature = (double)pa_temp_hex;
+      hl2->mrf101_temp = this_temperature; 
+
+      double this_current = ((double)pa_current_hex / 255) *5;
+      hl2->mrf101_current = this_current; 
+
+      hl2->current_peak = get_peak(hl2->current_peak_buf, hl2->mrf101_current);
       break;
       
     default:
@@ -434,7 +430,17 @@ HERMESLITE2 *create_hl2(void) {
   hl2->underflow = FALSE;
   hl2->late_packets = 0;
   hl2->ep6_error_ctr = 0;
+  
+  hl2->mrf101_temp = 0;
+  hl2->mrf101_current = 0;
+  hl2->current_peak = 0;
+  hl2->current_peak_buf = create_peak_detector(CURRENT_PEAK_BUF_SIZE, 0);
+
   hl2->qos_timer_id = g_timeout_add(5000,qos_timer_cb,(gpointer)hl2);
+
+  if (radio->filter_board == HL2_MRF101) {
+    HL2mrf101DataInit(hl2);      
+  }
   
   hl2->psu_clk = TRUE;
 

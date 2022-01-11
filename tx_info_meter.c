@@ -130,7 +130,11 @@ void update_tx_info_meter(TXMETER *meter, gdouble value, gdouble peak) {
     
     // Display the value as numbers on the display
     char text[32];
-    sprintf(text,"%2.0f", peak);
+    if (peak < 10.0) {
+      sprintf(text,"%2.2f", peak);
+    } else {
+      sprintf(text,"%2.0f", peak);
+    }
     cairo_text_extents(cr, text, &extents);
     cairo_move_to(cr, (3*(width/4)), height-2);
     cairo_show_text(cr, text);

@@ -245,6 +245,12 @@ static void comp_value_changed_cb(GtkWidget *widget, gpointer data) {
   SetTXACompressorGain(tx->channel, tx->compressor_level);
 }
 
+static void tx_compressor_cb(GtkWidget *widget, gpointer data) {
+  TRANSMITTER *tx=(TRANSMITTER *)data;
+  tx->compressor = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+  SetTXACompressorRun(tx->channel, tx->compressor);
+}
+
 void update_transmitter_dialog(TRANSMITTER *tx) {
   int i;
 
@@ -345,7 +351,7 @@ g_print("%s: tx=%d\n",__FUNCTION__,tx->channel);
   g_signal_connect(G_OBJECT(tune_scale),"value_changed",G_CALLBACK(tune_value_changed_cb),tx);
   gtk_grid_attach(GTK_GRID(tune_grid),tune_scale,1,1,1,1);
 
-  GtkWidget *tune_use_drive=gtk_check_button_new_with_label("Tune Use Drive:");
+  GtkWidget *tune_use_drive=gtk_check_button_new_with_label("Tune Use Drive");
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (tune_use_drive), tx->tune_use_drive);
   gtk_grid_attach(GTK_GRID(tune_grid),tune_use_drive,0,2,1,1);
   g_signal_connect(tune_use_drive,"toggled",G_CALLBACK(tune_use_drive_cb),tx);
@@ -358,7 +364,7 @@ g_print("%s: tx=%d\n",__FUNCTION__,tx->channel);
   gtk_container_add(GTK_CONTAINER(filter_frame),filter_grid);
   gtk_grid_attach(GTK_GRID(grid),filter_frame,col,row++,1,1);
 
-  GtkWidget *use_rx_filter=gtk_check_button_new_with_label("Use Rx Filter:");
+  GtkWidget *use_rx_filter=gtk_check_button_new_with_label("Use Rx Filter");
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (use_rx_filter), tx->use_rx_filter);
   gtk_grid_attach(GTK_GRID(filter_grid),use_rx_filter,0,0,2,1);
   g_signal_connect(use_rx_filter,"toggled",G_CALLBACK(use_rx_filter_cb),tx);
@@ -610,14 +616,14 @@ g_print("%s: tx=%d\n",__FUNCTION__,tx->channel);
   GtkWidget *enable_comp = gtk_check_button_new_with_label("Enable compressor");
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(enable_comp), tx->compressor);
   gtk_grid_attach(GTK_GRID(compressor_grid), enable_comp, 0, 2, 1, 1);
-  g_signal_connect(tune_use_drive,"toggled", G_CALLBACK(tune_use_drive_cb), tx);
+  g_signal_connect(enable_comp,"toggled", G_CALLBACK(tx_compressor_cb), tx);
 
   GtkWidget *enable_leveler = gtk_check_button_new_with_label("Enable leveler");
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(enable_leveler), tx->leveler);
   gtk_grid_attach(GTK_GRID(compressor_grid), enable_leveler,1,2,1,1);
-  g_signal_connect(tune_use_drive, "toggled", G_CALLBACK(tx_leveler_cb), tx);
+  g_signal_connect(enable_leveler, "toggled", G_CALLBACK(tx_leveler_cb), tx);
   
-  GtkWidget *comp_label=gtk_label_new("Compression (db):");
+  GtkWidget *comp_label=gtk_label_new("Compression (dB):");
   gtk_widget_show(comp_label);
   gtk_grid_attach(GTK_GRID(compressor_grid), comp_label,0,1,1,1);
 

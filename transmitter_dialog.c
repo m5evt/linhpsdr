@@ -96,11 +96,11 @@ static void microphone_choice_cb(GtkComboBox *widget,gpointer data) {
       radio->local_microphone=FALSE;
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (radio->transmitter->local_microphone_b),FALSE);
     }
-
-    i=gtk_combo_box_get_active(widget);
-    if(radio->microphone_name!=NULL) {
-      g_free(radio->microphone_name);
-      radio->microphone_name=NULL;
+  }  else {
+      i=gtk_combo_box_get_active(widget);
+      if(radio->microphone_name!=NULL) {
+        g_free(radio->microphone_name);
+        radio->microphone_name=NULL;
     }
     if(i>=0) {
       radio->microphone_name=g_new0(gchar,strlen(input_devices[i].name)+1);

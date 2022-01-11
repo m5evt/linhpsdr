@@ -37,7 +37,9 @@ typedef struct _vfo_data {
   GtkWidget *frequency_b_text;
   GtkWidget *subrx_b;
   GtkWidget *afgain_scale;
+  GtkWidget *squelch_scale;
   GtkWidget *agcgain_scale;
+  GtkWidget *squelch_label;
   GtkWidget *lock_b;
   GtkWidget *mode_b;
   GtkWidget *filter_b;
@@ -58,7 +60,7 @@ typedef struct _vfo_data {
   GtkWidget *div_b;  
 } VFO_DATA;
 
-#define STEPS 15
+#define STEPS 16
 extern gint64 steps[STEPS];
 extern char *step_labels[STEPS];
 

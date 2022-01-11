@@ -66,7 +66,7 @@ static gboolean qos_timer_cb(void *data) {
 
   HERMESLITE2 *hl2=(HERMESLITE2 *)data;
 
-  if (hl2->late_packets > 7) {
+  if ((hl2->late_packets > 7) && (radio->cwdaemon)) {
     g_print("Reset audio\n");    
     RECEIVER *tx_receiver = radio->transmitter->rx;
     if(tx_receiver!=NULL) {    
@@ -316,15 +316,38 @@ void HL2i2cProcessReturnValue(HERMESLITE2 *hl2, unsigned char c0,
   HL2i2cStoreValue(hl2, raddr, rdata); 
 }
 
+
+long long HL2cl2CalculateNearest(HERMESLITE2 *hl2, long long lo_freq) {
+  g_print("HL2: Calculate nearest LO %lld \n", lo_freq);
+  // VCO = 38.4*68 = 2611.2 MHz 
+  //unsigned int divisor = (2611200000 / (double)hl2->clock2_freq) / 2;
+  int divisor = (2611200000 / (double)lo_freq) / 2;
+  g_print("----- Use divisor CL2 %i \n", divisor);  
+
+  long long new_lo = (2611200000 / divisor) / 2;
+  
+  g_print("HL2: New LO %lld\n", new_lo);
+  return new_lo;
+}
+
 // Versaclock CL2 output enable
 void HL2cl2Enable(HERMESLITE2 *hl2) {
   g_print("HL2: Enable CL2 %ld \n", hl2->clock2_freq);
   // VCO = 38.4*68 = 2611.2 MHz 
-  double divisor = (2611200000 / (double)hl2->clock2_freq) / 2;
-  g_print("-----Divisor CL2 %lf \n", divisor);  
+  
+  unsigned int div = 1;
+  if (hl2->cl2_integer_mode) {
+    unsigned int divisor = (2611200000 / (double)hl2->clock2_freq) / 2;
+    div = (unsigned int)(divisor * pow(2, 24) + 0.1);
+    g_print("-----Divisor CL2 %i \n", divisor);  
+  } 
+  else {
+    double divisor = (2611200000 / (double)hl2->clock2_freq) / 2;
+    div = (unsigned int)(divisor * pow(2, 24) + 0.1);
+    g_print("-----Divisor CL2 %f \n", divisor);  
+  }
   
   unsigned int addr = ADDR_VERSA5 >> 1;
-  unsigned int div = (unsigned int)(divisor * pow(2, 24) + 0.1);
   unsigned int intgr = div >> 24;
   unsigned int frac = (div & 0xFFFFFF) << 2;
   
@@ -381,26 +404,30 @@ HERMESLITE2 *create_hl2(void) {
   HERMESLITE2 *hl2=g_new0(HERMESLITE2,1);
   
   hl2->one_shot_queue = create_long_ringbuffer(HL2_I2C_QUEUESIZE, 0);
-    
+
+  // HL2 i2c read/write
   hl2->addr_waiting_for = 0;
   hl2->command_waiting_for = 0;
-  
+ 
+  // MRF101 PA related
   hl2->mrf101_bias_enable = FALSE;
   hl2->mrf101_bias_value = 0;
+  hl2->mrf101_temp = 0;
   
-  hl2->clock2_freq = 1;
-  
+  if (radio->filter_board == HL2_MRF101) {
+    HL2mrf101AdcInit(hl2);      
+  }
+
+  // Diversity RX related 
   hl2->adc2_value_to_send = FALSE;
   hl2->adc2_lna_gain = 20;
   
 //  hl2->queue_busy = FALSE;  
-  
+ 
+  // HL2 QOS/QOS settings
   hl2->hl2_tx_buffer_size = 0x15;
   hl2->overflow = FALSE;
   hl2->underflow = FALSE;
-  
-  hl2->psu_clk = TRUE;
-  
   hl2->late_packets = 0;
   hl2->ep6_error_ctr = 0;
   
@@ -415,10 +442,15 @@ HERMESLITE2 *create_hl2(void) {
     HL2mrf101DataInit(hl2);      
   }
   
+  hl2->psu_clk = TRUE;
+
   
+  // XVTR/CL2 related 
   hl2->cl2_enabled = FALSE;
   hl2->xvtr = FALSE;
-  
+  hl2->clock2_freq = 1;
+  hl2->cl2_integer_mode = FALSE;
+
   return hl2;
 }
 

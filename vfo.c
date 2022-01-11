@@ -68,8 +68,8 @@ const long long ll_step[13]= {
    1LL
 };
 
-gint64 steps[STEPS]={1,10,25,50,100,250,500,1000,5000,9000,10000,100000,250000,500000,1000000};
-char *step_labels[STEPS]={"1 Hz","10 Hz","25 Hz","50 Hz","100 Hz","250 Hz","500 Hz","1 kHz","5 kHz","9 kHz","10 kHz","100 kHz","250 kHz","500 kHz","1 MHz"};
+gint64 steps[STEPS]={1,10,25,50,100,250,500,1000,5000,9000,10000,12500,100000,250000,500000,1000000};
+char *step_labels[STEPS]={"1 Hz","10 Hz","25 Hz","50 Hz","100 Hz","250 Hz","500 Hz","1 kHz","5 kHz","9 kHz","10 kHz","12.5 kHz", "100 kHz","250 kHz","500 kHz","1 MHz"};
    
 static gboolean pressed=FALSE;
 static gdouble last_x;
@@ -1255,6 +1255,70 @@ static gboolean agcgain_scale_scroll_event_cb(GtkWidget *widget,GdkEventScroll *
   return TRUE;
 }
 
+//********************************************************************************** 
+//********************************************************************************** 
+static gboolean squelch_press_cb(GtkWidget *widget,GdkEventButton *event,gpointer data) {
+  RECEIVER *rx=(RECEIVER *)data;
+  pressed=TRUE;
+  last_x=event->x;
+  has_moved=FALSE;
+  return TRUE;
+}
+
+static gboolean squelch_scale_motion_notify_event_cb(GtkWidget *widget, GdkEventMotion *event, gpointer data) {
+  RECEIVER *rx=(RECEIVER *)data;
+  if(pressed) {
+    has_moved=TRUE;
+    gdouble moved=event->x-last_x;
+    rx->squelch = rx->squelch + (moved/100.0);
+    if(rx->squelch > 1.0) rx->squelch= 1.0;
+    if(rx->squelch < 0) rx->squelch = 0;
+    set_squelch(rx);
+    last_x=event->x;
+    update_vfo(rx);
+  }
+  return TRUE;
+}
+
+static gboolean squelch_release_cb(GtkWidget *widget,GdkEventButton *event,gpointer data) {
+  RECEIVER *rx=(RECEIVER *)data;
+  if(has_moved) {
+    gdouble moved=event->x-last_x;
+    rx->squelch = rx->squelch + (moved/100);
+    if(rx->squelch>1.0) rx->squelch = 1.0;
+    if(rx->squelch<0.0) rx->squelch = 0.0;
+    set_squelch(rx);
+  } else {
+    rx->squelch = event->x/100;
+    if(rx->squelch>1.0) rx->squelch = 1.0;
+    if(rx->squelch<0.0) rx->squelch = 0.0;
+    set_squelch(rx);
+  }
+  pressed=FALSE;
+  has_moved=FALSE;
+  update_vfo(rx);
+  return TRUE;
+}
+
+static gboolean squelch_scale_scroll_event_cb(GtkWidget *widget,GdkEventScroll *event,gpointer data) {
+  RECEIVER *rx=(RECEIVER *)data;
+  VFO_DATA *v=(VFO_DATA *)g_object_get_data((GObject *)rx->vfo,"vfo_data");
+  if(event->direction==GDK_SCROLL_DOWN) {
+    if(rx->squelch>0.0) {
+      rx->squelch=rx->squelch-0.01;
+    }
+  } else if(event->direction==GDK_SCROLL_UP) {
+    if(rx->squelch<1.0) {
+      rx->squelch = rx->squelch+0.01;
+    }
+  }
+  gtk_level_bar_set_value(GTK_LEVEL_BAR(v->squelch_scale),rx->squelch);
+  set_squelch(rx);
+  return TRUE;
+}
+
+//********************************************************************************** 
+//********************************************************************************** 
 void band_cb(GtkWidget *menu_item,gpointer data) {
   CHOICE *choice=(CHOICE *)data;
   set_band(choice->rx,choice->selection,choice->sub_selection);
@@ -1591,6 +1655,34 @@ GtkWidget *create_vfo(RECEIVER *rx) {
   g_signal_connect(event_box_afgain,"button_release_event",G_CALLBACK(afgain_release_cb),rx);
   gtk_widget_set_events(event_box_afgain, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_SCROLL_MASK | GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK);
 
+
+  x=x+105;
+  y=21;
+  
+  v->squelch_label=gtk_label_new("SQL");
+  gtk_widget_set_name(v->squelch_label,"squelch-text");
+  gtk_layout_put(GTK_LAYOUT(v->vfo),v->squelch_label,x,y);
+  
+  x+=22;
+  y=18;
+
+  v->squelch_scale=gtk_level_bar_new();
+  gtk_level_bar_remove_offset_value(GTK_LEVEL_BAR(v->squelch_scale),GTK_LEVEL_BAR_OFFSET_LOW);
+  gtk_level_bar_remove_offset_value(GTK_LEVEL_BAR(v->squelch_scale),GTK_LEVEL_BAR_OFFSET_HIGH);
+  gtk_level_bar_remove_offset_value(GTK_LEVEL_BAR(v->squelch_scale),GTK_LEVEL_BAR_OFFSET_FULL);
+  gtk_widget_set_name(v->squelch_scale,"squelch-scale");
+  gtk_widget_set_size_request(v->squelch_scale,100,15);
+  gtk_level_bar_set_value(GTK_LEVEL_BAR(v->squelch_scale),rx->squelch);
+
+  GtkWidget *event_box_squelch = gtk_event_box_new();
+  gtk_container_add(GTK_CONTAINER(event_box_squelch),v->squelch_scale);
+  gtk_layout_put(GTK_LAYOUT(v->vfo),event_box_squelch,x,y);
+  g_signal_connect(event_box_squelch,"motion-notify-event",G_CALLBACK(squelch_scale_motion_notify_event_cb),rx);
+  g_signal_connect(event_box_squelch,"scroll_event",G_CALLBACK(squelch_scale_scroll_event_cb),(gpointer)rx);
+  g_signal_connect(event_box_squelch,"button_press_event",G_CALLBACK(squelch_press_cb),rx);
+  g_signal_connect(event_box_squelch,"button_release_event",G_CALLBACK(squelch_release_cb),rx);
+  gtk_widget_set_events(event_box_squelch, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_SCROLL_MASK | GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK);
+
   x=480;
   y=36;
 
@@ -1757,7 +1849,7 @@ GtkWidget *create_vfo(RECEIVER *rx) {
   gtk_layout_put(GTK_LAYOUT(v->vfo),v->xit_b,x,y);
   x=x+40;
 
-  //if(radio->transmitter!=NULL && radio->transmitter->rx==rx) {
+
   if(radio->transmitter!=NULL) {
     sprintf(temp,"%+05ld",radio->transmitter->xit); 
   } else {
@@ -1899,6 +1991,16 @@ void update_vfo(RECEIVER *rx) {
   // update AGC Gain scale
   gtk_level_bar_set_value(GTK_LEVEL_BAR(v->agcgain_scale),rx->agc_gain+20.0);
 
+  // update FM squelch
+  if(rx->mode_a==FMN) {
+    gtk_level_bar_set_value(GTK_LEVEL_BAR(v->squelch_scale),rx->squelch);
+    gtk_label_set_text(GTK_LABEL(v->squelch_label),"SQL");
+    gtk_widget_show(v->squelch_scale);
+  }
+  else {
+      gtk_label_set_text(GTK_LABEL(v->squelch_label),"");
+      gtk_widget_hide(v->squelch_scale);
+  }
   // update Lock button
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(v->lock_b),rx->locked);
 

@@ -252,6 +252,11 @@ g_print("radio_save_state: %s\n",filename);
 #endif
   }
 
+  if (radio->hl2 != NULL) {
+    sprintf(value,"%d",radio->hl2->hl2_tx_buffer_size);
+    setProperty("radio.hl2.tx_buffer_size",value);
+  }
+
   sprintf(value,"%d",radio->filter_board);
   setProperty("radio.filter_board",value);
 
@@ -424,6 +429,11 @@ void radio_restore_state(RADIO *radio) {
       }
     }
 #endif
+  }
+
+  if(radio->hl2 != NULL) {
+    value=getProperty("radio.hl2.tx_buffer_size");
+    if(value!=NULL) radio->hl2->hl2_tx_buffer_size = atoi(value);  
   }
 
   value=getProperty("radio.local_microphone");
@@ -1460,11 +1470,11 @@ g_print("create_radio for %s %d\n",d->name,d->device);
   
   r->dialog=NULL;
 
-  radio_restore_state(r);
-
   if (radio->discovered->device==DEVICE_HERMES_LITE2) {
     r->hl2 = create_hl2();
   }
+ 
+  radio_restore_state(r);
 
   radio_change_region(r);
 

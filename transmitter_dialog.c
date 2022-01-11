@@ -47,7 +47,7 @@
 static GtkWidget *microphone_frame;
 static GtkWidget *tx_spin_low;
 static GtkWidget *tx_spin_high;
-
+static GtkWidget *tx_latency;
 
 /*
 static gboolean close_cb (GtkWidget *widget, GdkEventButton *event, gpointer data) {
@@ -96,11 +96,11 @@ static void microphone_choice_cb(GtkComboBox *widget,gpointer data) {
       radio->local_microphone=FALSE;
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (radio->transmitter->local_microphone_b),FALSE);
     }
-  } else {
-    i=gtk_combo_box_get_active(widget);
-    if(radio->microphone_name!=NULL) {
-      g_free(radio->microphone_name);
-      radio->microphone_name=NULL;
+  }  else {
+      i=gtk_combo_box_get_active(widget);
+      if(radio->microphone_name!=NULL) {
+        g_free(radio->microphone_name);
+        radio->microphone_name=NULL;
     }
     if(i>=0) {
       radio->microphone_name=g_new0(gchar,strlen(input_devices[i].name)+1);
@@ -228,6 +228,23 @@ static void ctcss_frequency_cb(GtkWidget *widget, gpointer data) {
   transmitter_set_ctcss(tx,tx->ctcss_enabled,i);
 }
 
+static void tx_latency_cb(GtkWidget *widget, gpointer data) {
+  RADIO *r = (RADIO*)data;
+  r->hl2->hl2_tx_buffer_size = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widget)); 
+}
+
+static void tx_leveler_cb(GtkWidget *widget, gpointer data) {
+  TRANSMITTER *tx=(TRANSMITTER *)data;
+  tx->leveler = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+  SetTXALevelerSt(tx->channel, tx->leveler);
+}
+
+static void comp_value_changed_cb(GtkWidget *widget, gpointer data) {
+  TRANSMITTER *tx=(TRANSMITTER *)data;
+  tx->compressor_level = gtk_range_get_value(GTK_RANGE(widget));
+  SetTXACompressorGain(tx->channel, tx->compressor_level);
+}
+
 void update_transmitter_dialog(TRANSMITTER *tx) {
   int i;
 
@@ -277,7 +294,7 @@ g_print("%s: tx=%d\n",__FUNCTION__,tx->channel);
   gtk_grid_set_row_homogeneous(GTK_GRID(microphone_grid),TRUE);
   gtk_grid_set_column_homogeneous(GTK_GRID(microphone_grid),FALSE);
   gtk_container_add(GTK_CONTAINER(microphone_frame),microphone_grid);
-  gtk_grid_attach(GTK_GRID(grid),microphone_frame,col,row++,2,1);
+  gtk_grid_attach(GTK_GRID(grid),microphone_frame,col,row++,1,1);
 
   if(n_input_devices>=0) {
     radio->transmitter->local_microphone_b=gtk_check_button_new_with_label("Local Microphone");
@@ -463,8 +480,8 @@ g_print("%s: tx=%d\n",__FUNCTION__,tx->channel);
   gtk_grid_attach(GTK_GRID(panadapter_grid),panadapter_low_scale,1,2,1,1);
 
   col++;
-  row=1;
-
+  row=0;
+  
   GtkWidget *equalizer_frame=gtk_frame_new("Equalizer");
   GtkWidget *equalizer_grid=gtk_grid_new();
   gtk_grid_set_row_homogeneous(GTK_GRID(equalizer_grid),FALSE);
@@ -557,6 +574,59 @@ g_print("%s: tx=%d\n",__FUNCTION__,tx->channel);
   gtk_scale_add_mark(GTK_SCALE(high_scale),9.0,GTK_POS_LEFT,NULL);
   gtk_scale_add_mark(GTK_SCALE(high_scale),12.0,GTK_POS_LEFT,NULL);
   gtk_scale_add_mark(GTK_SCALE(high_scale),15.0,GTK_POS_LEFT,"15dB");
+
+  if (radio->hl2 != NULL) {
+  
+  row += 3;
+
+  GtkWidget *latency_frame=gtk_frame_new("TX Buffer Latency");
+  GtkWidget *latency_grid=gtk_grid_new();
+  gtk_grid_set_row_homogeneous(GTK_GRID(latency_grid),TRUE);
+  gtk_grid_set_column_homogeneous(GTK_GRID(latency_grid),FALSE);
+  gtk_grid_set_column_spacing(GTK_GRID(latency_grid),10);
+  gtk_container_add(GTK_CONTAINER(latency_frame),latency_grid);
+  gtk_grid_attach(GTK_GRID(grid),latency_frame,col,row++,1,1);
+
+  GtkWidget *fifo_label=gtk_label_new("Size (ms):");
+  gtk_widget_show(fifo_label);
+  gtk_grid_attach(GTK_GRID(latency_grid),fifo_label,1,1,1,1);
+
+  tx_latency = gtk_spin_button_new_with_range(10, 60,1.0);
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(tx_latency),(double)radio->hl2->hl2_tx_buffer_size);
+  gtk_grid_attach(GTK_GRID(latency_grid),tx_latency,2,1,1,1);
+
+  g_signal_connect(tx_latency, "value_changed", G_CALLBACK(tx_latency_cb), radio);
+
+  } 
+
+  GtkWidget *compressor_frame=gtk_frame_new("Speech Processing");
+  GtkWidget *compressor_grid=gtk_grid_new();
+  gtk_grid_set_row_homogeneous(GTK_GRID(compressor_grid),TRUE);
+  gtk_grid_set_column_homogeneous(GTK_GRID(compressor_grid),FALSE);
+  gtk_grid_set_column_spacing(GTK_GRID(compressor_grid),10);
+  gtk_container_add(GTK_CONTAINER(compressor_frame),compressor_grid);
+  gtk_grid_attach(GTK_GRID(grid),compressor_frame,col,row++,1,1);
+
+  GtkWidget *enable_comp = gtk_check_button_new_with_label("Enable compressor");
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(enable_comp), tx->compressor);
+  gtk_grid_attach(GTK_GRID(compressor_grid), enable_comp, 0, 2, 1, 1);
+  g_signal_connect(tune_use_drive,"toggled", G_CALLBACK(tune_use_drive_cb), tx);
+
+  GtkWidget *enable_leveler = gtk_check_button_new_with_label("Enable leveler");
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(enable_leveler), tx->leveler);
+  gtk_grid_attach(GTK_GRID(compressor_grid), enable_leveler,1,2,1,1);
+  g_signal_connect(tune_use_drive, "toggled", G_CALLBACK(tx_leveler_cb), tx);
+  
+  GtkWidget *comp_label=gtk_label_new("Compression (db):");
+  gtk_widget_show(comp_label);
+  gtk_grid_attach(GTK_GRID(compressor_grid), comp_label,0,1,1,1);
+
+  GtkWidget *comp_scale=gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL,0 ,20 ,1);
+  gtk_widget_set_size_request(comp_scale, 150, 32);
+  gtk_range_set_value (GTK_RANGE(comp_scale), tx->compressor_level);
+  gtk_widget_show(comp_scale);
+  g_signal_connect(G_OBJECT(comp_scale),"value_changed",G_CALLBACK(comp_value_changed_cb),tx);
+  gtk_grid_attach(GTK_GRID(compressor_grid),comp_scale,1,1,1,1);
 
   update_transmitter_dialog(tx);
 

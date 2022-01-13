@@ -78,6 +78,7 @@ struct _DISCOVERED {
     int supported_receivers;
     int supported_transmitters;
     int adcs;
+    int ps_tx_fdbk_chan;
     double frequency_min;
     double frequency_max;
     union {

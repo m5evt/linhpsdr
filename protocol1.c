@@ -756,215 +756,6 @@ static void process_ozy_input_buffer(unsigned char  *buffer) {
   }
 }
 
-#ifdef OLD_PROCESS
-static void process_ozy_input_buffer(char  *buffer) {
-  int i,j;
-  int r;
-  int count;
-  int b=0;
-  unsigned char ozy_samples[8*8];
-  int bytes;
-  gboolean previous_ptt;
-  gboolean previous_dot;
-  gboolean previous_dash;
-  int left_sample;
-  int right_sample;
-  short mic_sample;
-  double left_sample_double;
-  double right_sample_double;
-  double mic_sample_double;
-  double gain=pow(10.0, radio->transmitter->mic_gain / 20.0);
-  int left_sample_1;
-  int right_sample_1;
-  double left_sample_double_rx;
-  double right_sample_double_rx;
-  double left_sample_double_tx;
-  double right_sample_double_tx;
-  int nreceivers;
-
-  gint tx_mode = transmitter_get_mode(radio->transmitter);   
-
-  if(buffer[b++]==SYNC && buffer[b++]==SYNC && buffer[b++]==SYNC) {
-    // extract control bytes
-    control_in[0]=buffer[b++];
-    control_in[1]=buffer[b++];
-    control_in[2]=buffer[b++];
-    control_in[3]=buffer[b++];
-    control_in[4]=buffer[b++];
-
-    previous_ptt=radio->local_ptt;
-    previous_dot=radio->dot;
-    previous_dash=radio->dash;
-    radio->ptt=(control_in[0]&0x01)==0x01;
-    radio->dash=(control_in[0]&0x02)==0x02;
-    radio->dot=(control_in[0]&0x04)==0x04;
-
-    radio->local_ptt=radio->ptt;
-    if(tx_mode==CWL || tx_mode==CWU) {
-      radio->local_ptt=radio->ptt|radio->dot|radio->dash;
-    }
-    if(previous_ptt!=radio->local_ptt) {
-      //g_idle_add(ext_ptt_update,(gpointer)(long)(radio->local_ptt));
-    }
-
-    switch((control_in[0]>>3)&0x1F) {
-      case 0:
-        radio->adc_overload=control_in[1]&0x01==0x01;
-        radio->IO1=control_in[1]&0x02==0x02;
-        radio->IO2=control_in[1]&0x04==0x04;
-        radio->IO3=control_in[1]&0x08==0x08;
-        if(radio->mercury_software_version!=control_in[2]) {
-          radio->mercury_software_version=control_in[2];
-          fprintf(stderr,"  Mercury Software version: %d (0x%0X)\n",radio->mercury_software_version,radio->mercury_software_version);
-        }
-        if(radio->penelope_software_version!=control_in[3]) {
-          radio->penelope_software_version=control_in[3];
-          fprintf(stderr,"  Penelope Software version: %d (0x%0X)\n",radio->penelope_software_version,radio->penelope_software_version);
-        }
-        if(radio->ozy_software_version!=control_in[4]) {
-          radio->ozy_software_version=control_in[4];
-          fprintf(stderr,"FPGA firmware version: %d.%d\n",radio->ozy_software_version/10,radio->ozy_software_version%10);
-        }
-        break;
-      case 1:
-        radio->transmitter->exciter_power=((control_in[1]&0xFF)<<8)|(control_in[2]&0xFF); // from Penelope or Hermes
-        radio->transmitter->alex_forward_power=((control_in[3]&0xFF)<<8)|(control_in[4]&0xFF); // from Alex or Apollo
-        break;
-      case 2:
-        radio->transmitter->alex_reverse_power=((control_in[1]&0xFF)<<8)|(control_in[2]&0xFF); // from Alex or Apollo
-        radio->AIN3=(control_in[3]<<8)+control_in[4]; // from Pennelope or Hermes
-        break;
-      case 3:
-        radio->AIN4=(control_in[1]<<8)+control_in[2]; // from Pennelope or Hermes
-        radio->AIN6=(control_in[3]<<8)+control_in[4]; // from Pennelope or Hermes
-        break;
-    }
-
-#ifdef PURESIGNAL
-    nreceivers=(RECEIVERS*2)+1;
-#else
-    nreceivers=radio->receivers;
-#endif
-    int iq_samples=(512-8)/((nreceivers*6)+2);
-
-    for(i=0;i<iq_samples;i++) {
-      for(r=0;r<nreceivers;r++) {
-        //find receiver
-        count=-1;
-        for(j=0;j<radio->discovered->supported_receivers;j++) {
-          if(radio->receiver[j]!=NULL) {
-            count++;
-            if(count==r) break;
-          }
-        }
-
-        left_sample   = (int)((signed char) buffer[b++])<<16;
-        left_sample  |= (int)((((unsigned char)buffer[b++])<<8)&0xFF00);
-        left_sample  |= (int)((unsigned char)buffer[b++]&0xFF);
-        right_sample  = (int)((signed char)buffer[b++]) << 16;
-        right_sample |= (int)((((unsigned char)buffer[b++])<<8)&0xFF00);
-        right_sample |= (int)((unsigned char)buffer[b++]&0xFF);
-
-        left_sample_double=(double)left_sample/8388607.0; // 24 bit sample 2^23-1
-        right_sample_double=(double)right_sample/8388607.0; // 24 bit sample 2^23-1
-
-#ifdef PURESIGNAL
-        if(!isTransmitting(radio) || (isTransmitting(radio) && !radio->transmitter->puresignal)) {
-          switch(r) {
-            case 0:
-              add_iq_samples(receiver[0], left_sample_double,right_sample_double);
-              break;
-            case 1:
-              break;
-            case 2:
-              add_iq_samples(receiver[1], left_sample_double,right_sample_double);
-              break;
-            case 3:
-              break;
-            case 4:
-              break;
-          }
-        } else {
-          switch(r) {
-            case 0:
-              if(radio->discovered->device==DEVICE_METIS)  {
-                left_sample_double_rx=left_sample_double;
-                right_sample_double_rx=right_sample_double;
-              }
-              break;
-            case 1:
-              if(radio->discovered->device==DEVICE_METIS)  {
-                left_sample_double_tx=left_sample_double;
-                right_sample_double_tx=right_sample_double;
-                add_ps_iq_samples(radio->transmitter, left_sample_double_rx,right_sample_double_rx,left_sample_double_tx,right_sample_double_tx);
-              }
-              break;
-            case 2:
-              if(radio->discovered->device==DEVICE_HERMES)  {
-                left_sample_double_rx=left_sample_double;
-                right_sample_double_rx=right_sample_double;
-              }
-              break;
-            case 3:
-              if(radio->discovered->device==DEVICE_METIS)  {
-                left_sample_double_tx=left_sample_double;
-                right_sample_double_tx=right_sample_double;
-                add_ps_iq_samples(radio->transmitter, left_sample_double_tx,right_sample_double_tx,left_sample_double_rx,right_sample_double_rx);
-              } else if(radio->discovered->device==DEVICE_ANGELIA || radio->discovered->device==DEVICE_ORION || radio->discovered->device==DEVICE_ORION2) {
-                left_sample_double_rx=left_sample_double;
-                right_sample_double_rx=right_sample_double;
-              }
-              break;
-            case 4:
-              if(radio->discovered->device==DEVICE_ANGELIA || radio->discovered->device==DEVICE_ORION || radio->discovered->device==DEVICE_ORION2) {
-                left_sample_double_tx=left_sample_double;
-                right_sample_double_tx=right_sample_double;
-                add_ps_iq_samples(radio->transmitter, left_sample_double_tx,right_sample_double_tx,left_sample_double_rx,right_sample_double_rx);
-              }
-              break;
-          }
-        }
-#else
-        if(radio->receiver[j]!=NULL) {
-          add_iq_samples(radio->receiver[j], left_sample_double,right_sample_double);
-        } else {
-        }
-#endif
-      }
-
-      mic_sample  = (short)(buffer[b++]<<8);
-      mic_sample |= (short)(buffer[b++]&0xFF);
-      if(!radio->local_microphone) {
-        mic_samples++;
-        if(mic_samples>=mic_sample_divisor) { // reduce to 48000
-          add_mic_sample(radio->transmitter,(float)mic_sample/32768);
-          mic_samples=0;
-        }
-      }
-    }
-  } else {
-    time_t t;
-    struct tm* gmt;
-    time(&t);
-    gmt=gmtime(&t);
-
-    g_print("%s: process_ozy_input_buffer: did not find sync: restarting\n",
-            asctime(gmt));
-
-    b=0;
-    while(b<510) {
-      if(buffer[b]==SYNC && buffer[b+1]==SYNC && buffer[b+2]==SYNC) {
-        g_print("found sync at %d\n",b);
-      }
-      b++;
-    }
-    
-    metis_start_stop(0);
-    metis_restart();
-  }
-}
-#endif
-
 // Send rx audio back to radio
 void protocol1_audio_samples(RECEIVER *rx,short left_audio_sample,short right_audio_sample) {
   if(!isTransmitting(radio)) {
@@ -1211,8 +1002,12 @@ void ozy_send_buffer() {
           
     
 #ifdef PURESIGNAL
-    nreceivers=(RECEIVERS*2)-1;
-    nreceivers+=1; // for PS TX Feedback
+    if (radio->transmitter->puresignal) {
+      nreceivers = radio->discovered->ps_tx_fdbk_chan;
+    }
+    else {
+      nreceivers=radio->receivers-1;
+    }
 #else
     nreceivers=radio->receivers-1;
 #endif
@@ -1266,24 +1061,8 @@ void ozy_send_buffer() {
     switch(command) {
       case 1: // tx frequency
         output_buffer[C0]=0x02;
-        long long f=0LL;
+        long long f = transmitter_get_frequency(radio->transmitter);
 
-        RECEIVER *rx=radio->transmitter->rx;
-        if(rx!=NULL) {
-          if(rx->split) {
-            f=rx->frequency_b-rx->lo_b+rx->error_b;
-          } else {
-            if(rx->ctun) {
-              f=rx->ctun_frequency-rx->lo_a+rx->error_a;
-            } else {
-              f=rx->frequency_a-rx->lo_a+rx->error_a;
-            }
-          }
-
-          if(radio->transmitter->xit_enabled) {
-            f+=radio->transmitter->xit;
-          }
-        }
         output_buffer[C1]=f>>24;
         output_buffer[C2]=f>>16;
         output_buffer[C3]=f>>8;
@@ -1291,36 +1070,29 @@ void ozy_send_buffer() {
         break;
       case 2: // rx frequency
 #ifdef PURESIGNAL
-        nreceivers=(RECEIVERS*2)+1;
+        if (radio->transmitter->puresignal) {
+          nreceivers = radio->discovered->ps_tx_fdbk_chan;
+        }
+        else {
+          nreceivers=radio->receivers-1;
+        }
 #else
         nreceivers=radio->receivers;
 #endif
         if(current_rx<radio->discovered->supported_receivers) {
           output_buffer[C0]=0x04+(current_rx*2);
 #ifdef PURESIGNAL
-          int v=receiver[current_rx/2]->id;
-          if(isTransmitting(radio) && radio->transmitter->puresignal) {
-            long long txFrequency;
-            if(active_receiver->id==VFO_A) {
-              if(split) {
-                txFrequency=vfo[VFO_B].frequency-vfo[VFO_B].lo+vfo[VFO_B].offset;
-              } else {
-                txFrequency=vfo[VFO_A].frequency-vfo[VFO_A].lo+vfo[VFO_A].offset;
-              }
+          if (isTransmitting(radio) && radio->transmitter->puresignal
+             && ((current_rx == radio->discovered->ps_tx_fdbk_chan)
+             || (current_rx == radio->discovered->ps_tx_fdbk_chan - 1))){
+              long long txFrequency = transmitter_get_frequency(radio->transmitter);
+
+              output_buffer[C1]=txFrequency>>24;
+              output_buffer[C2]=txFrequency>>16;
+              output_buffer[C3]=txFrequency>>8;
+              output_buffer[C4]=txFrequency;
             } else {
-              if(split) {
-                txFrequency=vfo[VFO_A].frequency-vfo[VFO_A].lo+vfo[VFO_A].offset;
-              } else {
-                txFrequency=vfo[VFO_B].frequency-vfo[VFO_B].lo+vfo[VFO_B].offset;
-              }
-            }
-            output_buffer[C1]=txFrequency>>24;
-            output_buffer[C2]=txFrequency>>16;
-            output_buffer[C3]=txFrequency>>8;
-            output_buffer[C4]=txFrequency;
-          } else {
-#else
-            //RECEIVER *rx=radio->receiver[current_rx];
+#endif
             //find receiver
             count=-1;
             for(j=0;j<radio->discovered->supported_receivers;j++) {
@@ -1330,7 +1102,7 @@ void ozy_send_buffer() {
               }
             }
             RECEIVER *rx=radio->receiver[j];
-#endif
+            
             long long rx_frequency=0;
             if(rx!=NULL) {
               rx_frequency=rx->frequency_a-rx->lo_a+rx->error_a;
@@ -1348,10 +1120,9 @@ void ozy_send_buffer() {
             output_buffer[C2]=rx_frequency>>16;
             output_buffer[C3]=rx_frequency>>8;
             output_buffer[C4]=rx_frequency;
-#ifdef PURESIGNAL
-          }
-#endif
-          current_rx++;
+          
+        }
+            current_rx++;
         }
         if(current_rx>=radio->discovered->supported_receivers) {
           current_rx=0;
@@ -1568,16 +1339,7 @@ void ozy_send_buffer() {
         // need to add tx attenuation and rx ADC selection
         output_buffer[C0]=0x1C;
         output_buffer[C1]=0x00;
-#ifdef PURESIGNAL
-        output_buffer[C1]|=radio->receiver[0]->adc;
-        output_buffer[C1]|=(radio->receiver[0]->adc<<2);
-        output_buffer[C1]|=radio->receiver[1]->adc<<4;
-        output_buffer[C1]|=(radio->receiver[1]->adc<<6);
-        output_buffer[C2]=0x00;
-        if(radio->transmitter->puresignal) {
-          output_buffer[C2]|=radio->receiver[2]->adc;
-        }
-#else
+        
         if(radio->receiver[0]!=NULL) {
           output_buffer[C1]|=radio->receiver[0]->adc;
         }
@@ -1599,6 +1361,14 @@ void ozy_send_buffer() {
         }
         if(radio->receiver[6]!=NULL) {
           output_buffer[C2]|=(radio->receiver[6]->adc<<4);
+        }
+#ifdef PURESIGNAL
+        // With ps radio->receiver[X] could be null, but still
+        // need to make sure ADC is set correctly within the radio
+        // However, for now, set ps_rx_feedback as ADC0
+        if(radio->transmitter->puresignal) {
+          // RX3 - TODO option for different ADC (and set different RX)
+          output_buffer[C1]|= 0x3F;
         }
 #endif
         output_buffer[C3]=0x00;

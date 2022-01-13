@@ -144,7 +144,7 @@ static gpointer protocol2_thread(gpointer data);
 static gpointer protocol2_timer_thread(gpointer data);
 static void  process_iq_data(RECEIVER *rx,unsigned char *buffer);
 static void  process_wideband_data(WIDEBAND *w,unsigned char *buffer);
-#ifdef PURESIGNAL
+#ifdef PURESIGNAL_P2
 static void  process_ps_iq_data(RECEIVER *rx);
 #endif
 static void  process_command_response(unsigned char *buffer);
@@ -495,7 +495,7 @@ void protocol2_high_priority() {
         phase=(long)((4294967296.0*(double)txFrequency)/122880000.0);
         }
 
-#ifdef PURESIGNAL
+#ifdef PURESIGNAL_P2
       if(isTransmitting(radio) && radio->transmitter->puresignal) {
         // set puresignal rx to transmit frequency
         high_priority_buffer_to_radio[9]=phase>>24;
@@ -595,7 +595,7 @@ g_print("protocol2_high_priority: band=%d %s level=%d\n",radio->transmitter->rx-
 
     if(isTransmitting(radio)) {
       filters=0x08000000;
-#ifdef PURESIGNAL
+#ifdef PURESIGNAL_P2
       if(radio->transmitter->puresignal) {
         filters|=0x00040000;
       }
@@ -1006,7 +1006,7 @@ void protocol2_receive_specific() {
     }
   }
 
-#ifdef PURESIGNAL
+#ifdef PURESIGNAL_P2
     if(radio->transmitter->puresignal && isTransmitting(radio)) {
       int ps_rate=192000;
 
@@ -1258,7 +1258,7 @@ static void process_iq_data(RECEIVER *rx,unsigned char *buffer) {
   }
 }
 
-#ifdef PURESIGNAL
+#ifdef PURESIGNAL_P2
 static void process_ps_iq_data(RECEIVER *rx) {
   long sequence;
   long long timestamp;

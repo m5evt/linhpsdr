@@ -1045,6 +1045,26 @@ int transmitter_get_mode(TRANSMITTER *tx) {
   return tx_mode;
 }
 
+long long transmitter_get_frequency(TRANSMITTER *tx) {
+  long long f = 0;
+  RECEIVER *rx=radio->transmitter->rx;
+  if(rx!=NULL) {
+    if(rx->split) {
+      f=rx->frequency_b-rx->lo_b+rx->error_b;
+    } else {
+      if(rx->ctun) {
+        f=rx->ctun_frequency-rx->lo_a+rx->error_a;
+      } else {
+        f=rx->frequency_a-rx->lo_a+rx->error_a;
+      }
+    }
+
+    if(radio->transmitter->xit_enabled) {
+      f+=radio->transmitter->xit;
+    }
+  }
+}
+
 #ifdef CWDAEMON
 void transmitter_cw_sample_keystate(TRANSMITTER *tx) {
   // Sample the CW daemon key state NOW.

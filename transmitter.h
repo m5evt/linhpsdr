@@ -152,6 +152,13 @@ typedef struct _transmitter {
   gboolean ps_feedback;
   gboolean ps_auto;
   gboolean ps_single;
+#ifdef PURESIGNAL
+  gint fbk_buffer_size;
+  gdouble *rx_fbk_iq_buffer;
+  gint rx_fbk_sample;
+  gdouble *tx_fbk_iq_buffer;
+  gint tx_fbk_sample;
+#endif 
   GtkWidget *ps;
   cairo_surface_t *ps_surface;
   gint ps_timer_id;
@@ -181,6 +188,7 @@ extern void transmitter_init_analyzer(TRANSMITTER *tx);
 extern void transmitter_save_state(TRANSMITTER *tx);
 extern void transmitter_restore_state(TRANSMITTER *tx);
 extern void add_mic_sample(TRANSMITTER *tx,float sample);
+extern void add_ps_iq_samples(TRANSMITTER *tx, double i_sample_tx,double q_sample_tx, double i_sample_rx, double q_sample_rx);
 extern void transmitter_set_filter(TRANSMITTER *tx,int low,int high);
 extern void transmitter_set_pre_emphasize(TRANSMITTER *tx,int state);
 extern void transmitter_set_mode(TRANSMITTER *tx,int mode);

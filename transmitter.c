@@ -1372,6 +1372,33 @@ void add_mic_sample(TRANSMITTER *tx,float mic_sample) {
   }
 }
 
+void add_ps_iq_samples(TRANSMITTER *tx, double i_sample_tx,double q_sample_tx, double i_sample_rx, double q_sample_rx) {
+#ifdef PURESIGNAL
+  // DUC/TX feedback
+  tx->tx_fbk_iq_buffer[tx->tx_fbk_sample*2] = i_sample_tx;
+  tx->tx_fbk_iq_buffer[(tx->tx_fbk_sample*2)+1] = q_sample_tx;
+  // Post amplifier/ADC feedback
+  tx->rx_fbk_iq_buffer[tx->rx_fbk_sample*2]= i_sample_rx;
+  tx->rx_fbk_iq_buffer[(tx->rx_fbk_sample*2)+1] = q_sample_rx;
+
+  tx->tx_fbk_sample++;
+  tx->rx_fbk_sample++;
+
+  if(tx->rx_fbk_sample >= tx->fbk_buffer_size) {
+
+    if(isTransmitting(radio)) {
+      pscc(tx->channel, tx->fbk_buffer_size, tx->tx_fbk_iq_buffer, tx->rx_fbk_iq_buffer);
+//      if(transmitter->displaying && transmitter->feedback) {
+//        Spectrum0(1, rx_feedback->id, 0, 0, rx_feedback->iq_input_buffer);
+//      }
+    }
+  
+    tx->tx_fbk_sample = 0;
+    tx->rx_fbk_sample = 0;
+  }
+#endif
+}
+
 void transmitter_set_filter(TRANSMITTER *tx,int low,int high) {
 
   gint mode = transmitter_get_mode(tx);
@@ -1646,6 +1673,17 @@ g_print("create_transmitter: channel=%d\n",channel);
   tx->ps_auto=TRUE;
   tx->ps_single=FALSE;
 
+  #ifdef PURESIGNAL
+  tx->fbk_buffer_size = 1024;
+  
+  tx->rx_fbk_iq_buffer = g_new0(gdouble, 2*tx->fbk_buffer_size);
+  tx->rx_fbk_sample = 0;
+  
+  tx->tx_fbk_iq_buffer = g_new0(gdouble, 2*tx->fbk_buffer_size);
+  tx->tx_fbk_sample = 0;
+  
+  #endif
+  
   tx->dialog=NULL;
 
   tx->xit_enabled=FALSE;

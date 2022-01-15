@@ -634,6 +634,8 @@ static int right_sample;
 static short mic_sample;
 static double left_sample_double;
 static double right_sample_double;
+static double fbk_left_sample_double;
+static double fbk_right_sample_double;
 static int nsamples;
 static int iq_samples;
 
@@ -711,7 +713,24 @@ static void process_ozy_byte(int b) {
           if(i==nreceiver) break;
         }
       }
+#ifdef MOD_PURESIGNAL
+      if (isTransmitting(radio) && radio->transmitter->puresignal
+          && (( nreceiver == radio->discovered->ps_tx_fdbk_chan)
+          || (nreceiver == radio->discovered->ps_tx_fdbk_chan - 1))) {
+        if (nreceiver == (radio->discovered->ps_tx_fdbk_chan - 1)) {
+          g_print("RX %i: fbk add samples\n", nreceiver);
+          fbk_left_sample_double = left_sample_double;
+          fbk_right_sample_double = right_sample_double;
+        } else {
+          // Must be pre-DAC TX feedback
+          g_print("RX %i: add ps samples\n", nreceiver);
+          add_ps_iq_samples(radio->transmitter, left_sample_double, right_sample_double, fbk_left_sample_double, fbk_right_sample_double);
+        }                                                            
+      }
+      else if(radio->receiver[j]!=NULL) {
+#else
       if(radio->receiver[j]!=NULL) {
+#endif
         g_mutex_lock(&radio->delete_rx_mutex); 
         add_iq_samples(radio->receiver[j], left_sample_double,right_sample_double);
         g_mutex_unlock(&radio->delete_rx_mutex); 
@@ -1000,17 +1019,8 @@ void ozy_send_buffer() {
     
     if (radio->diversity_mixers > 0) output_buffer[C4] |= 0x80;
           
-    
-#ifdef PURESIGNAL
-    if (radio->transmitter->puresignal) {
-      nreceivers = radio->discovered->ps_tx_fdbk_chan;
-    }
-    else {
-      nreceivers=radio->receivers-1;
-    }
-#else
     nreceivers=radio->receivers-1;
-#endif
+    
     output_buffer[C4]|=nreceivers<<3;
     if(isTransmitting(radio)) {
       switch(radio->alex_tx_antenna) {
@@ -1069,24 +1079,15 @@ void ozy_send_buffer() {
         output_buffer[C4]=f;
         break;
       case 2: // rx frequency
-#ifdef PURESIGNAL
-        if (radio->transmitter->puresignal) {
-          nreceivers = radio->discovered->ps_tx_fdbk_chan;
-        }
-        else {
-          nreceivers=radio->receivers-1;
-        }
-#else
-        nreceivers=radio->receivers;
-#endif
+//        nreceivers=radio->receivers;
         if(current_rx<radio->discovered->supported_receivers) {
           output_buffer[C0]=0x04+(current_rx*2);
 #ifdef PURESIGNAL
           if (isTransmitting(radio) && radio->transmitter->puresignal
              && ((current_rx == radio->discovered->ps_tx_fdbk_chan)
-             || (current_rx == radio->discovered->ps_tx_fdbk_chan - 1))){
+             || (current_rx == radio->discovered->ps_tx_fdbk_chan - 1))) {
               long long txFrequency = transmitter_get_frequency(radio->transmitter);
-
+              g_print("TXF: %lld\n", txFrequency);
               output_buffer[C1]=txFrequency>>24;
               output_buffer[C2]=txFrequency>>16;
               output_buffer[C3]=txFrequency>>8;
@@ -1115,13 +1116,14 @@ void ozy_send_buffer() {
                 rx_frequency+=(long long)radio->cw_keyer_sidetone_frequency;
               }
             }
-
+            
             output_buffer[C1]=rx_frequency>>24;
             output_buffer[C2]=rx_frequency>>16;
             output_buffer[C3]=rx_frequency>>8;
             output_buffer[C4]=rx_frequency;
-          
+#ifdef PURESIGNAL 
         }
+#endif 
             current_rx++;
         }
         if(current_rx>=radio->discovered->supported_receivers) {
@@ -1368,7 +1370,7 @@ void ozy_send_buffer() {
         // However, for now, set ps_rx_feedback as ADC0
         if(radio->transmitter->puresignal) {
           // RX3 - TODO option for different ADC (and set different RX)
-          output_buffer[C1]|= 0x3F;
+          //output_buffer[C1]|= 0x3F;
         }
 #endif
         output_buffer[C3]=0x00;

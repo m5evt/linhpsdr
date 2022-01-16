@@ -26,6 +26,7 @@
 #include "ringbuffer.h"
 #include "peak_detect.h"
 #include "tx_info_meter.h"
+#include "puresignal.h"
 
 #define CTCSS_FREQUENCIES 38
 extern double ctcss_frequencies[CTCSS_FREQUENCIES];
@@ -147,7 +148,8 @@ typedef struct _transmitter {
 
   GtkWidget *dialog;
 
-  gboolean puresignal;
+  PSIGNAL *puresignal;
+  gboolean puresignal_enabled;
   gboolean ps_twotone;
   gboolean ps_feedback;
   gboolean ps_auto;

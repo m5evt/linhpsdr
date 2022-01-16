@@ -237,7 +237,7 @@ static void enable_cb(GtkWidget *widget, gpointer data) {
 static void twotone_cb(GtkWidget *widget, gpointer data) {
   TRANSMITTER *tx=(TRANSMITTER *)data;
   transmitter_set_twotone(tx,gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget)));
-  if(tx->ps_twotone && tx->puresignal) {
+  if(tx->ps_twotone && (tx->puresignal != NULL)) {
     running=TRUE;
     tx->ps_timer_id=g_timeout_add(100,info_timeout,(gpointer)tx);
   } else {
@@ -265,7 +265,7 @@ GtkWidget *create_puresignal_dialog(TRANSMITTER *tx) {
   gtk_grid_attach(GTK_GRID(grid),ps_frame,col,row++,2,1);
 
   GtkWidget *enable_b=gtk_check_button_new_with_label("Enable PS");
-  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (enable_b), tx->puresignal);
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (enable_b), tx->puresignal_enabled);
   g_signal_connect(enable_b,"toggled",G_CALLBACK(enable_cb),tx);
   gtk_grid_attach(GTK_GRID(ps_grid),enable_b,0,0,1,1);
 

@@ -883,10 +883,13 @@ void transmitter_fps_changed(TRANSMITTER *tx) {
 }
 
 void transmitter_set_ps(TRANSMITTER *tx,gboolean state) {
-  tx->puresignal=state;
-
-
+#ifdef PURESIGNAL
   if(state) {
+    //Enable PureSignal
+    if (tx->puresignal != NULL) {
+      tx->puresignal = create_puresignal();
+    }
+
     for (int i = 0; i < radio->discovered->ps_tx_fdbk_chan; i++) {
       if (radio->receiver[i] != NULL) {
         add_receiver(radio, 0);
@@ -894,9 +897,12 @@ void transmitter_set_ps(TRANSMITTER *tx,gboolean state) {
     }
     SetPSControl(tx->channel, 0, 0, 1, 0);
   } else {
-    // Delete ps_tx_fdbk_chan
+    //Disable PureSignal
+    tx->puresignal = NULL;
+    // TODO Delete ps_tx_fdbk_chan
     SetPSControl(tx->channel, 1, 0, 0, 0);
   }
+#endif
 }
 
 void transmitter_enable_eer(TRANSMITTER *tx,gboolean state) {
@@ -1676,13 +1682,15 @@ g_print("create_transmitter: channel=%d\n",channel);
   tx->panadapter=NULL;
   tx->panadapter_surface=NULL;
 
-  tx->puresignal=FALSE;
+  tx->puresignal = NULL;
+  tx->puresignal_enabled = FALSE;
   tx->ps_twotone=FALSE;
   tx->ps_feedback=FALSE;
   tx->ps_auto=TRUE;
   tx->ps_single=FALSE;
 
   #ifdef PURESIGNAL
+  // TODO move this to the relevant rx
   tx->fbk_buffer_size = 1024;
   
   tx->rx_fbk_iq_buffer = g_new0(gdouble, 2*tx->fbk_buffer_size);

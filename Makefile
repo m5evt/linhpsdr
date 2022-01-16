@@ -54,6 +54,21 @@ soapy_discovery.o \
 soapy_protocol.o
 endif
 
+# PureSignal adaptive distortion for HPSDR radios 
+# (currently only protocol1)
+PURESIGNAL_INCLUDE=PURESIGNAL
+
+ifeq ($(PURESIGNAL_INCLUDE),PURESIGNAL)
+PURESIGNAL_OPTIONS=-D PURESIGNAL
+PURESIGNAL_SOURCES= \
+puresignal.c
+PURESIGNAL_HEADERS= \
+puresignal.h
+PURESIGNAL_OBJS= \
+puresignal.o
+endif
+
+
 ifeq ($(UNAME_S), Linux)
 # cwdaemon support. Allows linux based logging software to key an Hermes/HermesLite2
 # needs :
@@ -92,10 +107,9 @@ endif
 endif
 
 CFLAGS=	-g -Wno-deprecated-declarations -O3
-OPTIONS=  $(MIDI_OPTIONS) $(AUDIO_OPTIONS)  $(SOAPYSDR_OPTIONS) \
+OPTIONS=  $(MIDI_OPTIONS) $(AUDIO_OPTIONS)  $(PURESIGNAL_OPTIONS) $(SOAPYSDR_OPTIONS) \
          $(CWDAEMON_OPTIONS)  $(OPENGL_OPTIONS) \
           -D USE_VFO_B_MODE_AND_FILTER="USE_VFO_B_MODE_AND_FILTER" \
-					-D PURESIGNAL="PURESIGNAL" \
          -D GIT_DATE='"$(GIT_DATE)"' -D GIT_VERSION='"$(GIT_VERSION)"'
 #OPTIONS=-g -Wno-deprecated-declarations $(AUDIO_OPTIONS) -D GIT_DATE='"$(GIT_DATE)"' -D GIT_VERSION='"$(GIT_VERSION)"' -O3 -D FT8_MARKER
 
@@ -298,12 +312,12 @@ subrx.o \
 actions.o
 
 
-$(PROGRAM):  $(OBJS) $(SOAPYSDR_OBJS) $(CWDAEMON_OBJS) $(MIDI_OBJS)
-	$(LINK) -o $(PROGRAM) $(OBJS) $(SOAPYSDR_OBJS) $(CWDAEMON_OBJS) $(MIDI_OBJS)  $(LIBS)
+$(PROGRAM):  $(OBJS) $(SOAPYSDR_OBJS) $(CWDAEMON_OBJS) $(MIDI_OBJS) $(PURESIGNAL_OBJS)
+	$(LINK) -o $(PROGRAM) $(OBJS) $(SOAPYSDR_OBJS) $(CWDAEMON_OBJS) $(MIDI_OBJS) $(PURESIGNAL_OBJS) $(LIBS)
 
 
 all: prebuild  $(PROGRAM) $(HEADERS) $(MIDI_HEADERS) $(SOURCES) $(SOAPYSDR_SOURCES) \
-							 $(CWDAEMON_SOURCES) $(MIDI_SOURCES)
+							 $(CWDAEMON_SOURCES) $(MIDI_SOURCES) $(PURESIGNAL_SOURCES)
 
 prebuild:
 	rm -f version.o

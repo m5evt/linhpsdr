@@ -496,7 +496,7 @@ void protocol2_high_priority() {
         }
 
 #ifdef PURESIGNAL_P2
-      if(isTransmitting(radio) && radio->transmitter->puresignal) {
+      if(isTransmitting(radio) && (radio->transmitter->puresignal != NULL)) {
         // set puresignal rx to transmit frequency
         high_priority_buffer_to_radio[9]=phase>>24;
         high_priority_buffer_to_radio[10]=phase>>16;
@@ -596,7 +596,7 @@ g_print("protocol2_high_priority: band=%d %s level=%d\n",radio->transmitter->rx-
     if(isTransmitting(radio)) {
       filters=0x08000000;
 #ifdef PURESIGNAL_P2
-      if(radio->transmitter->puresignal) {
+      if(radio->transmitter->puresignal != NULL) {
         filters|=0x00040000;
       }
 #endif
@@ -1007,7 +1007,7 @@ void protocol2_receive_specific() {
   }
 
 #ifdef PURESIGNAL_P2
-    if(radio->transmitter->puresignal && isTransmitting(radio)) {
+    if((radio->transmitter->puresignal != NULL) && isTransmitting(radio)) {
       int ps_rate=192000;
 
       receive_specific_buffer[5]|=radio->dither<<radio->receiver[i]->channel; // dither enable

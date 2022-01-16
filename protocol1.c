@@ -714,7 +714,7 @@ static void process_ozy_byte(int b) {
         }
       }
 #ifdef PURESIGNAL
-      if (isTransmitting(radio) && radio->transmitter->puresignal
+      if (isTransmitting(radio) && (radio->transmitter->puresignal != NULL)
           && (( nreceiver == radio->discovered->ps_tx_fdbk_chan)
           || (nreceiver == radio->discovered->ps_tx_fdbk_chan - 1))) {
         if (nreceiver == (radio->discovered->ps_tx_fdbk_chan - 1)) {
@@ -1082,7 +1082,7 @@ void ozy_send_buffer() {
         if(current_rx<radio->discovered->supported_receivers) {
           output_buffer[C0]=0x04+(current_rx*2);
 #ifdef PURESIGNAL
-          if (isTransmitting(radio) && radio->transmitter->puresignal
+          if (isTransmitting(radio) && (radio->transmitter->puresignal != NULL)
              && ((current_rx == radio->discovered->ps_tx_fdbk_chan)
              || (current_rx == radio->discovered->ps_tx_fdbk_chan - 1))) {
               // Force 2 receivers used for PS during TX to be locked to
@@ -1292,7 +1292,7 @@ void ozy_send_buffer() {
         output_buffer[C2]=0x00;
         output_buffer[C2]|=radio->linein_gain;
 #ifdef PURESIGNAL
-        if(isTransmitting(radio) && radio->transmitter->puresignal) {
+        if(isTransmitting(radio) && (radio->transmitter->puresignal != NULL)) {
           output_buffer[C2]|=0x40;
         }
 #endif
@@ -1368,7 +1368,7 @@ void ozy_send_buffer() {
         // With ps radio->receiver[X] could be null, but still
         // need to make sure ADC is set correctly within the radio
         // However, for now, set ps_rx_feedback as ADC0
-        if(radio->transmitter->puresignal) {
+        if(radio->transmitter->puresignal != NULL) {
           // RX3 - TODO option for different ADC (and set different RX)
           //output_buffer[C1]|= 0x3F;
         }

@@ -1609,11 +1609,12 @@ gboolean parse_extended_cmd(COMMAND *cmd) {
           if(radio->transmitter) {
             if(command[4]==';') {
               // send reply back
-              sprintf(reply,"ZZLI%d;",radio->transmitter->puresignal);
+              sprintf(reply,"ZZLI%d;",radio->transmitter->puresignal_enabled);
               send_resp(cmd,reply) ;
             } else {
               int ps=atoi(&command[4]);
-              radio->transmitter->puresignal=ps;
+              // TODO enable PS via CAT
+              //radio->transmitter->puresignal_enabled=ps;
             }
             update_vfo(rx);
           } else {

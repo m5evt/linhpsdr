@@ -885,16 +885,16 @@ void transmitter_fps_changed(TRANSMITTER *tx) {
 void transmitter_set_ps(TRANSMITTER *tx,gboolean state) {
   tx->puresignal=state;
 
-  for (int i = 0; i < radio->discovered->ps_tx_fdbk_chan; i++) {
-    if (radio->receiver[i] != NULL) {
-      add_receiver(radio, 0);
-    }
-  }
 
-  return;
   if(state) {
+    for (int i = 0; i < radio->discovered->ps_tx_fdbk_chan; i++) {
+      if (radio->receiver[i] != NULL) {
+        add_receiver(radio, 0);
+      }
+    }
     SetPSControl(tx->channel, 0, 0, 1, 0);
   } else {
+    // Delete ps_tx_fdbk_chan
     SetPSControl(tx->channel, 1, 0, 0, 0);
   }
 }
@@ -1071,6 +1071,7 @@ long long transmitter_get_frequency(TRANSMITTER *tx) {
       f+=radio->transmitter->xit;
     }
   }
+  return f;
 }
 
 #ifdef CWDAEMON

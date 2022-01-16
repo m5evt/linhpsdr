@@ -713,17 +713,16 @@ static void process_ozy_byte(int b) {
           if(i==nreceiver) break;
         }
       }
-#ifdef MOD_PURESIGNAL
+#ifdef PURESIGNAL
       if (isTransmitting(radio) && radio->transmitter->puresignal
           && (( nreceiver == radio->discovered->ps_tx_fdbk_chan)
           || (nreceiver == radio->discovered->ps_tx_fdbk_chan - 1))) {
         if (nreceiver == (radio->discovered->ps_tx_fdbk_chan - 1)) {
-          g_print("RX %i: fbk add samples\n", nreceiver);
           fbk_left_sample_double = left_sample_double;
           fbk_right_sample_double = right_sample_double;
         } else {
           // Must be pre-DAC TX feedback
-          g_print("RX %i: add ps samples\n", nreceiver);
+          if (nreceiver != 3) g_print("RX %i: add ps samples\n", nreceiver);
           add_ps_iq_samples(radio->transmitter, left_sample_double, right_sample_double, fbk_left_sample_double, fbk_right_sample_double);
         }                                                            
       }
@@ -1086,8 +1085,9 @@ void ozy_send_buffer() {
           if (isTransmitting(radio) && radio->transmitter->puresignal
              && ((current_rx == radio->discovered->ps_tx_fdbk_chan)
              || (current_rx == radio->discovered->ps_tx_fdbk_chan - 1))) {
+              // Force 2 receivers used for PS during TX to be locked to
+              // the TX frequency
               long long txFrequency = transmitter_get_frequency(radio->transmitter);
-              g_print("TXF: %lld\n", txFrequency);
               output_buffer[C1]=txFrequency>>24;
               output_buffer[C2]=txFrequency>>16;
               output_buffer[C3]=txFrequency>>8;

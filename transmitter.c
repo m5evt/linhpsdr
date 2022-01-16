@@ -886,7 +886,7 @@ void transmitter_set_ps(TRANSMITTER *tx,gboolean state) {
 #ifdef PURESIGNAL
   if(state) {
     //Enable PureSignal
-    if (tx->puresignal != NULL) {
+    if (tx->puresignal == NULL) {
       tx->puresignal = create_puresignal();
     }
 

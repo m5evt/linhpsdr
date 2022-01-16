@@ -57,7 +57,7 @@
 
 PSIGNAL *create_puresignal(void) {
   PSIGNAL *ps = g_new0(PSIGNAL, 1);
-
+  g_print("----------------------Create new puresignal\n");
   ps->ints = 16;
   ps->spi = 256;
   ps->stbl = 0;

@@ -183,6 +183,7 @@ static gboolean info_timeout(gpointer arg) {
   }
 
   GetPSInfo(tx->channel,&info[0]);
+  /*
   double ddb;
   int newcal=info[COR_CNT]!=old_cor_cnt;
   old_cor_cnt=info[COR_CNT];
@@ -223,6 +224,7 @@ static gboolean info_timeout(gpointer arg) {
       SetPSControl(tx->channel, 0, save_ps_single, save_ps_auto, 0);
       break;
   }
+  */
   GetPSMaxTX(tx->channel,&pk);
   update_ps(tx,pk);
 

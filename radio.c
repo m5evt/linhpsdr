@@ -795,6 +795,7 @@ g_print("%s: isTransmitting=%d\n",__FUNCTION__,isTransmitting(r));
       }
     }
     SetChannelState(r->transmitter->channel,1,0);
+    if (r->transmitter->puresignal != NULL) SetPSMox(r->transmitter->channel, 1);
     switch(r->discovered->protocol) {
       case PROTOCOL_1:
         break;
@@ -810,6 +811,7 @@ g_print("%s: isTransmitting=%d\n",__FUNCTION__,isTransmitting(r));
     }
   } else {
     SetChannelState(r->transmitter->channel,0,1);
+    if (r->transmitter->puresignal != NULL) SetPSMox(r->transmitter->channel, 0);
     for(i=0;i<r->discovered->supported_receivers;i++) {
       if(r->receiver[i]!=NULL) {
         if(!r->receiver[i]->duplex) {

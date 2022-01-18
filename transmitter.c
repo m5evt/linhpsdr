@@ -944,6 +944,7 @@ void transmitter_set_twotone(TRANSMITTER *tx,gboolean state) {
 g_print("transmitter_set_twotone: %d\n",state);
   tx->ps_twotone=state;
   if(state) {
+    SetTXAPostGenTTMag(tx->channel, 0.49, 0.49);
     SetTXAPostGenMode(tx->channel, 1);
     SetTXAPostGenRun(tx->channel, 1);
   } else {
@@ -1402,6 +1403,7 @@ void add_ps_iq_samples(TRANSMITTER *tx, double i_sample_tx,double q_sample_tx, d
   if(tx->rx_fbk_sample >= tx->fbk_buffer_size) {
 
     if(isTransmitting(radio)) {
+//      g_print("pscc: size %i sample %i\n", tx->fbk_buffer_size, tx->rx_fbk_sample);
       pscc(tx->channel, tx->fbk_buffer_size, tx->tx_fbk_iq_buffer, tx->rx_fbk_iq_buffer);
 //      if(transmitter->displaying && transmitter->feedback) {
 //        Spectrum0(1, rx_feedback->id, 0, 0, rx_feedback->iq_input_buffer);

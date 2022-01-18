@@ -1376,7 +1376,16 @@ void ozy_send_buffer() {
         output_buffer[C3]=0x00;
         output_buffer[C3]|=radio->transmitter->attenuation;
         // Enabled HL2 hardware managed LNA gain during TX
-        if(radio->discovered->device==DEVICE_HERMES_LITE2) output_buffer[C3]|=0x80;
+        if (radio->hl2 != NULL) {
+          // HL2 full AD9866 gain range -12 dB (0) to 48 dB (60)
+          // bit 5 enabled to turn on 20 dB attenuator
+          // leave bit 7 as 0 for software controlled gain during tx
+          //output_buffer[C3]=0x60;
+          output_buffer[C3]=0x40;
+          // HL2 extends into [5:0] of this buffer          
+          //output_buffer[C3]|=(((int)radio->hl2->lna_gain_tx + 12)&0x3F);
+          output_buffer[C3] |= (((int)radio->hl2->adc2_lna_gain + 12) & 0x3F);
+        }
         output_buffer[C4]=0x00;
         break;
       case 7:

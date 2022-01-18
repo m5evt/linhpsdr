@@ -33,6 +33,8 @@ typedef struct _psignal {
   gdouble amp_delay;
 
   gdouble peak_value;
+
+  gint info_timer_id;
 } PSIGNAL;
 
 extern PSIGNAL *create_puresignal(void);

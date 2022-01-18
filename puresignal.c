@@ -55,6 +55,95 @@
 #include "audio.h"
 #include "math.h"
 
+#define INFO_SIZE 16
+
+static gboolean info_timer_cb(void *data) {
+  PSIGNAL *ps=(PSIGNAL *)data; 
+
+  g_print("**********************************\n");
+  
+  static int info[INFO_SIZE];
+  
+  GetPSInfo(radio->transmitter->channel, &info[0]);
+  for(int i = 0; i < INFO_SIZE; i++) {
+    switch(i) {
+      case 4:
+        // Feedback
+        g_print("Feedback: %i\n", info[i]);
+        break;
+
+      case 5:
+        // Corrections count
+        g_print("cor.count: %i\n", info[i]);
+        break;
+
+      case 6:
+        // Computed correction solution
+        g_print("sln.chk: %i\n", info[i]);
+        break;
+
+      case 13:
+        // Dog count
+        g_print("dg.count: %i\n", info[i]);
+        break;
+
+      case 14:
+        // 
+        g_print("State: %i\n", info[i]);
+        break;
+
+      case 15:
+        g_print("Control state: \n");
+        // State of the control state-machine
+        switch(info[i]) {
+          case 0:
+            g_print("RESET\n");
+            break;
+          case 1:
+            g_print("WAIT\n");
+            break;
+          case 2:
+            g_print("MOXDELAY\n");
+            break;
+          case 3:
+            g_print("SETUP\n");
+            break;
+          case 4:
+            g_print("COLLECT\n");
+            break;
+          case 5:
+            g_print("MOXCHECK\n");
+            break;
+          case 6:
+            g_print("CALC\n");
+            break;
+          case 7:
+            g_print("DELAY\n");
+            break;
+          case 8:
+            g_print("STAYON\n");
+            break;
+          case 9:
+            g_print("TURNON\n");
+            break;
+          default:
+            g_print("?\n");
+            break;
+        }
+        break;
+    }
+  }
+
+  double pk;
+  GetPSMaxTX(radio->transmitter->channel, &pk);
+  g_print("Get Peak: %f\n", pk);
+
+  GetPSHWPeak(radio->transmitter->channel, &pk);
+  g_print("Set Peak: %f\n", pk);
+
+  return TRUE;
+}
+
 PSIGNAL *create_puresignal(void) {
   PSIGNAL *ps = g_new0(PSIGNAL, 1);
   g_print("----------------------Create new puresignal\n");
@@ -78,6 +167,15 @@ PSIGNAL *create_puresignal(void) {
   SetPSMoxDelay(radio->transmitter->channel, ps->mox_delay);
   SetPSTXDelay(radio->transmitter->channel, ps->amp_delay);
   SetPSLoopDelay(radio->transmitter->channel, ps->loop_delay);
+
+  //ps->info_timer_id = g_timeout_add(500, info_timer_cb,(gpointer)ps);
+
+  // TODO this value is only valid for the HL2
+  double set_peak = 0.2300;
+
+  SetPSFeedbackRate(radio->transmitter->channel, radio->transmitter->rx->sample_rate);
+
+  SetPSHWPeak(radio->transmitter->channel, set_peak);
 
   return ps;
 }

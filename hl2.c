@@ -443,6 +443,8 @@ HERMESLITE2 *create_hl2(void) {
   
   hl2->psu_clk = TRUE;
 
+  // LNA gain during transmit
+  hl2->lna_gain_tx = 20;
   
   // XVTR/CL2 related 
   hl2->cl2_enabled = FALSE;

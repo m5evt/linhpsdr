@@ -93,6 +93,8 @@ typedef struct _hermeslite2 {
   //fpga generated clocks - removes noise on 160m
   gboolean psu_clk;
 
+  gint lna_gain_tx;
+  
   gint qos_timer_id;
   gint mrf101data_timer_id;  
 

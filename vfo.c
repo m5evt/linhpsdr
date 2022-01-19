@@ -513,26 +513,22 @@ static void div_b_cb(GtkToggleButton *widget,gpointer user_data) {
 
 static void ps_press_cb(GtkToggleButton *widget,gpointer user_data) {
   RECEIVER *rx=(RECEIVER *)user_data;
-  g_print("ps_press_cb\n"); 
+#ifdef PURESIGNAL
   if(radio->transmitter!=NULL && radio->transmitter->rx==rx) {
     TRANSMITTER *tx=radio->transmitter;
     int state = gtk_toggle_button_get_active(widget);
  
     if (state) {
       transmitter_set_ps(tx, 1);
-      //transmitter_set_ps(radio->transmitter, 1);
       g_print("PS ON\n");
-      //tx->puresignal_enabled = TRUE;
+      tx->puresignal_enabled = TRUE;
     } else {
-      //transmitter_set_ps(radio->transmitter, 0);
       transmitter_set_ps(tx, 0);
       g_print("PS OFF\n");
-      //tx->puresignal_enabled = FALSE;
+      tx->puresignal_enabled = FALSE;
     }
-
-    // g_print("PureSignal change state %i\n", tx->puresignal_enabled);
-    g_print("PureSignal change state %i\n", state);
   }
+#endif
 }
 
 
@@ -1600,7 +1596,7 @@ GtkWidget *create_vfo(RECEIVER *rx) {
       gtk_label_set_text(GTK_LABEL(v->tx_label),"ASSIGNED TX");
     }
   }
-  
+#ifdef PURESIGNAL 
   x+=83;
 
   v->ps_b=gtk_toggle_button_new_with_label("PS");
@@ -1612,6 +1608,7 @@ GtkWidget *create_vfo(RECEIVER *rx) {
   gtk_widget_set_size_request(v->ps_b,35,6);
   g_signal_connect(v->ps_b, "toggled", G_CALLBACK(ps_press_cb), rx);
   gtk_layout_put(GTK_LAYOUT(v->vfo),v->ps_b,x,y);
+#endif
   /* ... */
 
   x=0;
@@ -2011,19 +2008,23 @@ void update_vfo(RECEIVER *rx) {
 
     if(tx->rx==rx) {
       gtk_label_set_text(GTK_LABEL(v->tx_label),"ASSIGNED TX");
-      //gtk_widget_set_sensitive(GTK_TOGGLE_BUTTON(v->ps_b), TRUE);
+#ifdef PURESIGNAL
       gtk_widget_set_sensitive(v->ps_b, TRUE);
       gtk_widget_show(v->ps_b);
+#endif
     } else {
       gtk_label_set_text(GTK_LABEL(v->tx_label),"");
-      //gtk_widget_set_sensitive(GTK_TOGGLE_BUTTON(v->ps_b), FALSE);
+#ifdef PURESIGNAL
       gtk_widget_set_sensitive(v->ps_b, FALSE);
       gtk_widget_hide(v->ps_b);
+#endif
     }
 
+#ifdef PURESIGNAL
     g_signal_handlers_block_by_func(v->ps_b, G_CALLBACK(ps_press_cb), rx);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(v->ps_b), radio->transmitter->puresignal_enabled);
     g_signal_handlers_unblock_by_func(v->ps_b,G_CALLBACK(ps_press_cb), rx);
+#endif
 
     g_signal_handlers_block_by_func(v->xit_b,G_CALLBACK(xit_b_cb),rx);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(v->xit_b),tx->xit_enabled);

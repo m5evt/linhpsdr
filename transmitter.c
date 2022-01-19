@@ -895,6 +895,9 @@ void transmitter_set_ps(TRANSMITTER *tx,gboolean state) {
         add_receiver(radio, 0);
       }
     }
+    tx->rx_puresignal_txfbk = radio->receiver[radio->discovered->ps_tx_fdbk_chan];
+    tx->rx_puresignal_rxfbk = radio->receiver[radio->discovered->ps_tx_fdbk_chan - 1];
+
     SetPSControl(tx->channel, 0, 0, 1, 0);
   } else {
     //Disable PureSignal
@@ -1391,27 +1394,30 @@ void add_mic_sample(TRANSMITTER *tx,float mic_sample) {
 void add_ps_iq_samples(TRANSMITTER *tx, double i_sample_tx,double q_sample_tx, double i_sample_rx, double q_sample_rx) {
 #ifdef PURESIGNAL
   // DUC/TX feedback
-  tx->tx_fbk_iq_buffer[tx->tx_fbk_sample*2] = i_sample_tx;
-  tx->tx_fbk_iq_buffer[(tx->tx_fbk_sample*2)+1] = q_sample_tx;
+  tx->rx_puresignal_txfbk->iq_input_buffer[tx->rx_puresignal_txfbk->samples * 2] = i_sample_tx;
+  tx->rx_puresignal_txfbk->iq_input_buffer[(tx->rx_puresignal_txfbk->samples * 2) + 1] = q_sample_tx;
+
   // Post amplifier/ADC feedback
-  tx->rx_fbk_iq_buffer[tx->rx_fbk_sample*2]= i_sample_rx;
-  tx->rx_fbk_iq_buffer[(tx->rx_fbk_sample*2)+1] = q_sample_rx;
+  tx->rx_puresignal_rxfbk->iq_input_buffer[tx->rx_puresignal_rxfbk->samples * 2] = i_sample_rx;
+  tx->rx_puresignal_rxfbk->iq_input_buffer[(tx->rx_puresignal_rxfbk->samples * 2) + 1] = q_sample_rx;
 
-  tx->tx_fbk_sample++;
-  tx->rx_fbk_sample++;
+  tx->rx_puresignal_rxfbk->samples++;
+  tx->rx_puresignal_txfbk->samples++;
 
-  if(tx->rx_fbk_sample >= tx->fbk_buffer_size) {
+  if(tx->rx_puresignal_txfbk->samples >= tx->rx_puresignal_txfbk->buffer_size) {
 
     if(isTransmitting(radio)) {
 //      g_print("pscc: size %i sample %i\n", tx->fbk_buffer_size, tx->rx_fbk_sample);
-      pscc(tx->channel, tx->fbk_buffer_size, tx->tx_fbk_iq_buffer, tx->rx_fbk_iq_buffer);
+      pscc(tx->channel, tx->rx_puresignal_txfbk->buffer_size, 
+           tx->rx_puresignal_txfbk->iq_input_buffer, 
+           tx->rx_puresignal_rxfbk->iq_input_buffer);
 //      if(transmitter->displaying && transmitter->feedback) {
 //        Spectrum0(1, rx_feedback->id, 0, 0, rx_feedback->iq_input_buffer);
 //      }
     }
   
-    tx->tx_fbk_sample = 0;
-    tx->rx_fbk_sample = 0;
+    tx->rx_puresignal_rxfbk->samples = 0;
+    tx->rx_puresignal_txfbk->samples = 0;
   }
 #endif
 }
@@ -1692,15 +1698,8 @@ g_print("create_transmitter: channel=%d\n",channel);
   tx->ps_single=FALSE;
 
   #ifdef PURESIGNAL
-  // TODO move this to the relevant rx
-  tx->fbk_buffer_size = 1024;
-  
-  tx->rx_fbk_iq_buffer = g_new0(gdouble, 2*tx->fbk_buffer_size);
-  tx->rx_fbk_sample = 0;
-  
-  tx->tx_fbk_iq_buffer = g_new0(gdouble, 2*tx->fbk_buffer_size);
-  tx->tx_fbk_sample = 0;
-  
+  tx->rx_puresignal_txfbk = NULL;
+  tx->rx_puresignal_rxfbk = NULL;
   #endif
   
   tx->dialog=NULL;

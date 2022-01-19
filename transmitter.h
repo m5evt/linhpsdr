@@ -155,11 +155,8 @@ typedef struct _transmitter {
   gboolean ps_auto;
   gboolean ps_single;
 #ifdef PURESIGNAL
-  gint fbk_buffer_size;
-  gdouble *rx_fbk_iq_buffer;
-  gint rx_fbk_sample;
-  gdouble *tx_fbk_iq_buffer;
-  gint tx_fbk_sample;
+  RECEIVER *rx_puresignal_txfbk;
+  RECEIVER *rx_puresignal_rxfbk;
 #endif 
   GtkWidget *ps;
   cairo_surface_t *ps_surface;

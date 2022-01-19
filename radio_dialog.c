@@ -253,6 +253,10 @@ static void sample_rate_cb(GtkComboBoxText *widget,gpointer data) {
 #endif
   }
 
+#ifdef
+  transmitter_set_ps_sample_rate(radio->transmitter, rate);
+#endif
+
   g_idle_add(radio_restart,(void *)radio);
 }
 

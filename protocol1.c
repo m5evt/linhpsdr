@@ -1364,15 +1364,7 @@ void ozy_send_buffer() {
         if(radio->receiver[6]!=NULL) {
           output_buffer[C2]|=(radio->receiver[6]->adc<<4);
         }
-#ifdef PURESIGNAL
-        // With ps radio->receiver[X] could be null, but still
-        // need to make sure ADC is set correctly within the radio
-        // However, for now, set ps_rx_feedback as ADC0
-        if(radio->transmitter->puresignal != NULL) {
-          // RX3 - TODO option for different ADC (and set different RX)
-          //output_buffer[C1]|= 0x3F;
-        }
-#endif
+        
         output_buffer[C3]=0x00;
         output_buffer[C3]|=radio->transmitter->attenuation;
         // Enabled HL2 hardware managed LNA gain during TX

@@ -171,7 +171,14 @@ PSIGNAL *create_puresignal(void) {
   //ps->info_timer_id = g_timeout_add(500, info_timer_cb,(gpointer)ps);
 
   // TODO this value is only valid for the HL2
-  double set_peak = 0.2300;
+  double set_peak = 0.4067;
+
+  if (radio->discovered->device == DEVICE_HERMES_LITE2) {
+    set_peak = 0.2300;
+  } 
+  else if (radio->discovered->protocol == PROTOCOL_2) {
+    set_peak = 0.2899;
+  }
 
   SetPSFeedbackRate(radio->transmitter->channel, radio->transmitter->rx->sample_rate);
 

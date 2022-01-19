@@ -253,7 +253,7 @@ static void sample_rate_cb(GtkComboBoxText *widget,gpointer data) {
 #endif
   }
 
-#ifdef
+#ifdef PURESIGNAL
   transmitter_set_ps_sample_rate(radio->transmitter, rate);
 #endif
 

@@ -519,9 +519,14 @@ static void ps_press_cb(GtkToggleButton *widget,gpointer user_data) {
     int state = gtk_toggle_button_get_active(widget);
  
     if (state) {
-      transmitter_set_ps(tx, 1);
-      g_print("PS ON\n");
-      tx->puresignal_enabled = TRUE;
+      if (radio->receivers <= (radio->discovered->ps_tx_fdbk_chan - 1)) {
+        transmitter_set_ps(tx, 1);
+        g_print("PS ON\n");
+        tx->puresignal_enabled = TRUE;
+      }
+      else {
+        g_print("Close a receiver %i\n", radio->receivers);
+      }
     } else {
       transmitter_set_ps(tx, 0);
       g_print("PS OFF\n");

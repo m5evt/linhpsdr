@@ -882,6 +882,13 @@ void transmitter_fps_changed(TRANSMITTER *tx) {
   tx->update_timer_id=g_timeout_add(1000/tx->fps,update_timer_cb,(gpointer)tx);
 }
 
+static int ps_end_timer_cb(gpointer data) {
+  g_print("**************Restart P1\n");
+  protocol1_stop();
+  g_idle_add(radio_restart,(void *)radio);
+  return FALSE;
+}
+
 void transmitter_set_ps(TRANSMITTER *tx,gboolean state) {
 #ifdef PURESIGNAL
   if(state) {
@@ -900,10 +907,20 @@ void transmitter_set_ps(TRANSMITTER *tx,gboolean state) {
 
     SetPSControl(tx->channel, 0, 0, 1, 0);
   } else {
+    // Delete hidden rxs
+    for (int i = 0; i <= (radio->receivers + 1); i++) {
+      if (radio->receiver[i] != NULL) {
+        g_print("RX%i\n", i);
+        if (radio->receiver[i]->show_rx == FALSE) {
+          g_print("Delete RX%i\n", i);
+          delete_receiver(radio->receiver[i]);
+        }
+      }
+    }
     //Disable PureSignal
     tx->puresignal = NULL;
-    // TODO Delete ps_tx_fdbk_chan
     SetPSControl(tx->channel, 1, 0, 0, 0);
+    g_timeout_add(500,ps_end_timer_cb, tx);
   }
 #endif
 }

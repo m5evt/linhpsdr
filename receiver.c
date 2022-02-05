@@ -381,6 +381,10 @@ void receiver_save_state(RECEIVER *rx) {
   sprintf(value,"%f",paned_percent);
   setProperty(name,value);
   
+  sprintf(name,"receiver[%d].show_rx",rx->channel);
+  sprintf(value,"%i", rx->show_rx);
+  setProperty(name,value);
+
 fprintf(stderr,"receiver_save_sate: paned_position=%d paned_height=%d paned_percent=%f\n",rx->paned_position, paned_height, paned_percent);
 }
 
@@ -658,6 +662,10 @@ void receiver_restore_state(RECEIVER *rx) {
   sprintf(name,"receiver[%d].paned_percent",rx->channel);
   value=getProperty(name);
   if(value) rx->paned_percent=atof(value);
+  
+  sprintf(name,"receiver[%d].show_rx",rx->channel);
+  value=getProperty(name);
+  if(value) rx->show_rx=atoi(value);
 }
 
 void receiver_xvtr_changed(RECEIVER *rx) {
@@ -1897,6 +1905,7 @@ fprintf(stderr,"create_receiver: fft_size=%d\n",rx->fft_size);
   rx->diversity_hidden_rx = -1;
   rx->dmix_id = MAX_DIVERSITY_MIXERS+1;
 
+  rx->show_rx = show_rx; 
 
   receiver_restore_state(rx);
 
@@ -1979,7 +1988,6 @@ g_print("receiver_change_sample_rate: resample_step=%d\n",rx->resample_step);
   SetDisplayAverageMode(rx->channel, 0,  AVERAGE_MODE_LOG_RECURSIVE/*display_average_mode*/);
   calculate_display_average(rx); 
 
-  rx->show_rx = show_rx; 
   if (!rx->show_rx) return rx;
   
   create_visual(rx);

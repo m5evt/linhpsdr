@@ -35,7 +35,15 @@ typedef struct _psignal {
   gdouble peak_value;
 
   gint info_timer_id;
+
+  gint attenuation;
+
+  gint state;
+  gint auto_on;
+  gint old_cor_cnt;
 } PSIGNAL;
 
+extern void ps_change_tx_attenuation(PSIGNAL *ps, int att_diff);
+extern int ps_get_tx_attenuation(PSIGNAL *ps);
 extern PSIGNAL *create_puresignal(void);
 #endif

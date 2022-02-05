@@ -408,6 +408,17 @@ void HL2clock2Status(HERMESLITE2 *hl2, gboolean xvtr_on, const long int *clock_f
   }
 }
 
+void hl2_set_tx_attenuation(HERMESLITE2 *hl2, int new_att) {
+  g_print("SET: new_att %i\n", new_att);
+  hl2->lna_gain_tx =  new_att;
+  g_print("SET: lna_tx %i\n", hl2->lna_gain_tx);
+}
+
+int hl2_get_tx_attenuation(HERMESLITE2 *hl2) {
+  g_print("GET: lna_tx %i\n", hl2->lna_gain_tx);
+  return MAX_GAIN - hl2->lna_gain_tx;
+}
+
 HERMESLITE2 *create_hl2(void) {
   HERMESLITE2 *hl2=g_new0(HERMESLITE2,1);
   

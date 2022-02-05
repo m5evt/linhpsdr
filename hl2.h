@@ -58,6 +58,7 @@
 
 #define CURRENT_PEAK_BUF_SIZE 40
 
+#define MAX_GAIN 31 
 
 typedef struct _hermeslite2 {
   gint mrf101_bias_value;
@@ -128,5 +129,9 @@ extern void HL2i2cProcessReturnValue(HERMESLITE2 *hl2, unsigned char c0,
                                      unsigned char c1, unsigned char c2, unsigned char c3, unsigned char c4);
 
 extern long long HL2cl2CalculateNearest(HERMESLITE2 *hl2, long long lo_freq);
+
+extern int hl2_get_tx_attenuation(HERMESLITE2 *hl2);
+extern void hl2_set_tx_attenuation(HERMESLITE2 *hl2, int new_att);
+
 extern void hl2_init(HERMESLITE2 *hl2);
 #endif

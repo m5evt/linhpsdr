@@ -60,6 +60,7 @@
 #include "subrx.h"
 
 void receiver_save_state(RECEIVER *rx) {
+  if (rx->show_rx == FALSE) return;
   char name[80];
   char value[80];
   int i;
@@ -1978,8 +1979,8 @@ g_print("receiver_change_sample_rate: resample_step=%d\n",rx->resample_step);
   SetDisplayAverageMode(rx->channel, 0,  AVERAGE_MODE_LOG_RECURSIVE/*display_average_mode*/);
   calculate_display_average(rx); 
 
-  
-  if (!show_rx) return rx;
+  rx->show_rx = show_rx; 
+  if (!rx->show_rx) return rx;
   
   create_visual(rx);
   if(rx->window!=NULL) {

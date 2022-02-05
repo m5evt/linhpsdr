@@ -1373,10 +1373,9 @@ void ozy_send_buffer() {
           // bit 5 enabled to turn on 20 dB attenuator
           // leave bit 7 as 0 for software controlled gain during tx
           //output_buffer[C3]=0x60;
-          output_buffer[C3]=0x40;
+          output_buffer[C3]=0xC0;
           // HL2 extends into [5:0] of this buffer          
-          //output_buffer[C3]|=(((int)radio->hl2->lna_gain_tx + 12)&0x3F);
-          output_buffer[C3] |= (((int)radio->hl2->adc2_lna_gain + 12) & 0x3F);
+          output_buffer[C3] |= (((int)radio->hl2->lna_gain_tx + 12) & 0x3F);
         }
         output_buffer[C4]=0x00;
         break;

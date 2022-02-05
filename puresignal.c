@@ -1,5 +1,5 @@
 /* Copyright (C)
-* 2020 - m5evt
+* 2022 - m5evt
 *
 * This program is free software; you can redistribute it and/or
 * modify it under the terms of the GNU General Public License
@@ -144,6 +144,51 @@ static gboolean info_timer_cb(void *data) {
   return TRUE;
 }
 
+void ps_change_tx_attenuation(PSIGNAL *ps, int att_diff) {
+  // Work out new attuenation
+  int new_att = 0;
+  if (radio->hl2 != NULL) {
+    new_att = radio->hl2->lna_gain_tx - att_diff; 
+  }
+  else {
+    new_att = radio->transmitter->attenuation + att_diff;
+  }
+  
+  g_print("att_diff %i New %i old %i \n", att_diff, new_att, ps->attenuation);
+  // Limit range of new attenuation value
+  if (new_att < 0) {
+    new_att = 0;
+  } 
+  else if (new_att > 31) {
+    new_att = 31;
+  }
+ 
+  if (new_att != ps->attenuation) {
+    g_print("New att\n");
+    SetPSControl(radio->transmitter->channel, 1, 0, 0, 0);
+
+    if (radio->hl2 != NULL) {
+      hl2_set_tx_attenuation(radio->hl2, new_att); 
+    }
+    else {
+      radio->transmitter->attenuation = new_att;
+      //TODO protocol2
+    }
+
+    ps->state=1;
+  }
+}
+
+int ps_get_tx_attenuation(PSIGNAL *ps) {
+  if (radio->hl2 != NULL) {
+    ps->attenuation = hl2_get_tx_attenuation(radio->hl2);
+  } else {
+    ps->attenuation = radio->transmitter->attenuation;
+  }
+  
+  return ps->attenuation; 
+}
+
 PSIGNAL *create_puresignal(void) {
   PSIGNAL *ps = g_new0(PSIGNAL, 1);
   g_print("----------------------Create new puresignal\n");
@@ -158,6 +203,11 @@ PSIGNAL *create_puresignal(void) {
   ps->amp_delay = 150E-9;
 
   ps->peak_value = 0;
+
+  ps->state = 0;
+  ps->auto_on = 1;
+  ps->old_cor_cnt = 0;
+  ps->attenuation = 0;
 
   SetPSIntsAndSpi(radio->transmitter->channel, ps->ints, ps->spi);
   SetPSStabilize(radio->transmitter->channel, ps->stbl);

@@ -626,6 +626,12 @@ void transmitter_save_state(TRANSMITTER *tx) {
   sprintf(name,"transmitter[%d].xit_step",tx->channel);
   sprintf(value,"%ld",tx->xit_step);
   setProperty(name,value);
+  sprintf(name,"transmitter[%d].compressor",tx->channel);
+  sprintf(value,"%i",tx->compressor);
+  setProperty(name,value);
+  sprintf(name,"transmitter[%d].compressor_level",tx->channel);
+  sprintf(value,"%f",tx->compressor_level);
+  setProperty(name,value);
 }
 
 void transmitter_restore_state(TRANSMITTER *tx) {
@@ -762,6 +768,12 @@ void transmitter_restore_state(TRANSMITTER *tx) {
   value=getProperty(name);
   if(value) tx->xit_step=atol(value);
 
+  sprintf(name,"transmitter[%d].compressor",tx->channel);
+  value=getProperty(name);
+  if(value) tx->compressor=atoi(value);
+  sprintf(name,"transmitter[%d].compressor_level",tx->channel);
+  value=getProperty(name);
+  if(value) tx->compressor_level=atof(value);
 }
 
 static gboolean update_timer_cb(void *data) {

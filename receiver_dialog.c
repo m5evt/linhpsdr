@@ -1207,7 +1207,7 @@ GtkWidget *create_receiver_dialog(RECEIVER *rx) {
     
     GtkWidget *tx_mute_b = gtk_check_button_new_with_label("Mute while TX");
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tx_mute_b), rx->mute_while_transmitting);
-    gtk_grid_attach(GTK_GRID(audio_grid),tx_mute_b,0,3,3,1);
+    gtk_grid_attach(GTK_GRID(audio_grid),tx_mute_b,0,3,1,1);
     g_signal_connect(tx_mute_b,"toggled",G_CALLBACK(mute_while_tx_cb),rx);
   }
 

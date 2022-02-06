@@ -1591,7 +1591,7 @@ GtkWidget *create_vfo(RECEIVER *rx) {
   gtk_layout_put(GTK_LAYOUT(v->vfo),v->step_b,x,y);
   
 
-  x = 640;
+  x = 630;
   v->tx_label=gtk_label_new("");
   gtk_widget_set_name(v->tx_label,"warning-label");
   gtk_widget_set_size_request(v->tx_label,60,15);
@@ -1602,7 +1602,7 @@ GtkWidget *create_vfo(RECEIVER *rx) {
     }
   }
 #ifdef PURESIGNAL 
-  x+=83;
+  x+=93;
 
   v->ps_b=gtk_toggle_button_new_with_label("PS");
   gtk_widget_set_name(v->ps_b,"vfo-toggle");
@@ -1610,7 +1610,7 @@ GtkWidget *create_vfo(RECEIVER *rx) {
   if(radio!=NULL && radio->transmitter!=NULL) {
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(v->ps_b), radio->transmitter->puresignal_enabled);
   }
-  gtk_widget_set_size_request(v->ps_b,35,6);
+  gtk_widget_set_size_request(v->ps_b,33,6);
   g_signal_connect(v->ps_b, "toggled", G_CALLBACK(ps_press_cb), rx);
   gtk_layout_put(GTK_LAYOUT(v->vfo),v->ps_b,x,y);
 #endif

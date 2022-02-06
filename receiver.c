@@ -1277,6 +1277,12 @@ static void process_rx_buffer(RECEIVER *rx) {
     left_audio_sample=(short)(left_sample*32767.0);
     right_audio_sample=(short)(right_sample*32767.0);
 
+
+    if (isTransmitting(radio) && (rx->mute_while_transmitting)) { 
+      left_sample=0;
+      right_sample=0;
+    }
+
     if(rx->local_audio) {
       audio_write(rx,(float)left_sample,(float)right_sample);
     }
@@ -1908,7 +1914,7 @@ fprintf(stderr,"create_receiver: fft_size=%d\n",rx->fft_size);
   rx->show_rx = show_rx; 
 
   receiver_restore_state(rx);
-
+  
   if(radio->discovered->protocol==PROTOCOL_1) {
     if(rx->sample_rate!=sample_rate) {
       rx->sample_rate=sample_rate;

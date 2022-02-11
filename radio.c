@@ -710,6 +710,13 @@ void delete_receiver(RECEIVER *rx) {
     g_print("Not null, delete the hidden rx\n");
     delete_diversity_mixer(radio->divmixer[rx->dmix_id]);
   }
+ 
+  int reopen_rx = 0;
+#ifdef PURESIGNAL
+  if (radio->transmitter->puresignal != NULL) {
+    if (rx->show_rx == TRUE) reopen_rx = 1;
+  }
+#endif
   
   int i;
   for(i=0;i<radio->discovered->supported_receivers;i++) {
@@ -752,9 +759,13 @@ g_print("delete_receiver: receivers now %d\n",radio->receivers);
     gtk_widget_destroy(radio->dialog);
     radio->dialog=NULL;
   }
-  
+  // For PureSignal, need to reopen the receiver just deleted
+  // as a hidden rx
+  if (reopen_rx == 1) add_receiver(radio, 0);
+
   g_idle_add(radio_restart,(void *)radio);
-  
+ 
+
   g_mutex_unlock(&radio->delete_rx_mutex);  
 }
 

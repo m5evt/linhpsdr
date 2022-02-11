@@ -710,6 +710,13 @@ void delete_receiver(RECEIVER *rx) {
     g_print("Not null, delete the hidden rx\n");
     delete_diversity_mixer(radio->divmixer[rx->dmix_id]);
   }
+ 
+  int reopen_rx = 0;
+#ifdef PURESIGNAL
+  if (radio->transmitter->puresignal != NULL) {
+    if (rx->show_rx == TRUE) reopen_rx = 1;
+  }
+#endif
   
   int i;
   for(i=0;i<radio->discovered->supported_receivers;i++) {
@@ -752,9 +759,13 @@ g_print("delete_receiver: receivers now %d\n",radio->receivers);
     gtk_widget_destroy(radio->dialog);
     radio->dialog=NULL;
   }
-  
+  // For PureSignal, need to reopen the receiver just deleted
+  // as a hidden rx
+  if (reopen_rx == 1) add_receiver(radio, 0);
+
   g_idle_add(radio_restart,(void *)radio);
-  
+ 
+
   g_mutex_unlock(&radio->delete_rx_mutex);  
 }
 
@@ -795,6 +806,7 @@ g_print("%s: isTransmitting=%d\n",__FUNCTION__,isTransmitting(r));
       }
     }
     SetChannelState(r->transmitter->channel,1,0);
+    if (r->transmitter->puresignal != NULL) SetPSMox(r->transmitter->channel, 1);
     switch(r->discovered->protocol) {
       case PROTOCOL_1:
         break;
@@ -810,6 +822,7 @@ g_print("%s: isTransmitting=%d\n",__FUNCTION__,isTransmitting(r));
     }
   } else {
     SetChannelState(r->transmitter->channel,0,1);
+    if (r->transmitter->puresignal != NULL) SetPSMox(r->transmitter->channel, 0);
     for(i=0;i<r->discovered->supported_receivers;i++) {
       if(r->receiver[i]!=NULL) {
         if(!r->receiver[i]->duplex) {
@@ -1287,11 +1300,16 @@ g_print("create_radio for %s %d\n",d->name,d->device);
 #ifdef SOAPYSDR
     case SOAPYSDR:
       r->sample_rate=r->discovered->info.soapy.sample_rate;
-      //if(r->sample_rate==0) {
-        r->sample_rate=768000;
-      //}
+      r->sample_rate=768000;
+      if(strcmp(r->discovered->name,"rtlsdr")==0) {
+        r->sample_rate=1536000;
+      }
       r->buffer_size=2048;
-      r->alex_rx_antenna=3; // LNAW
+      if(strcmp(r->discovered->name,"lime")==0) {
+        r->alex_rx_antenna=3; // LNAW
+      } else {
+        r->alex_rx_antenna=0; // ANT 0
+      }
       r->alex_tx_antenna=0; // ANT 1
       break;
 #endif

@@ -60,6 +60,7 @@
 #include "subrx.h"
 
 void receiver_save_state(RECEIVER *rx) {
+  if (rx->show_rx == FALSE) return;
   char name[80];
   char value[80];
   int i;
@@ -380,6 +381,10 @@ void receiver_save_state(RECEIVER *rx) {
   sprintf(value,"%f",paned_percent);
   setProperty(name,value);
   
+  sprintf(name,"receiver[%d].show_rx",rx->channel);
+  sprintf(value,"%i", rx->show_rx);
+  setProperty(name,value);
+
 fprintf(stderr,"receiver_save_sate: paned_position=%d paned_height=%d paned_percent=%f\n",rx->paned_position, paned_height, paned_percent);
 }
 
@@ -657,6 +662,10 @@ void receiver_restore_state(RECEIVER *rx) {
   sprintf(name,"receiver[%d].paned_percent",rx->channel);
   value=getProperty(name);
   if(value) rx->paned_percent=atof(value);
+  
+  sprintf(name,"receiver[%d].show_rx",rx->channel);
+  value=getProperty(name);
+  if(value) rx->show_rx=atoi(value);
 }
 
 void receiver_xvtr_changed(RECEIVER *rx) {
@@ -1267,6 +1276,12 @@ static void process_rx_buffer(RECEIVER *rx) {
     }
     left_audio_sample=(short)(left_sample*32767.0);
     right_audio_sample=(short)(right_sample*32767.0);
+
+
+    if (isTransmitting(radio) && (rx->mute_while_transmitting)) { 
+      left_sample=0;
+      right_sample=0;
+    }
 
     if(rx->local_audio) {
       audio_write(rx,(float)left_sample,(float)right_sample);
@@ -1896,9 +1911,10 @@ fprintf(stderr,"create_receiver: fft_size=%d\n",rx->fft_size);
   rx->diversity_hidden_rx = -1;
   rx->dmix_id = MAX_DIVERSITY_MIXERS+1;
 
+  rx->show_rx = show_rx; 
 
   receiver_restore_state(rx);
-
+  
   if(radio->discovered->protocol==PROTOCOL_1) {
     if(rx->sample_rate!=sample_rate) {
       rx->sample_rate=sample_rate;
@@ -1978,8 +1994,7 @@ g_print("receiver_change_sample_rate: resample_step=%d\n",rx->resample_step);
   SetDisplayAverageMode(rx->channel, 0,  AVERAGE_MODE_LOG_RECURSIVE/*display_average_mode*/);
   calculate_display_average(rx); 
 
-  
-  if (!show_rx) return rx;
+  if (!rx->show_rx) return rx;
   
   create_visual(rx);
   if(rx->window!=NULL) {

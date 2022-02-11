@@ -26,6 +26,7 @@
 #include "ringbuffer.h"
 #include "peak_detect.h"
 #include "tx_info_meter.h"
+#include "puresignal.h"
 
 #define CTCSS_FREQUENCIES 38
 extern double ctcss_frequencies[CTCSS_FREQUENCIES];
@@ -147,11 +148,16 @@ typedef struct _transmitter {
 
   GtkWidget *dialog;
 
-  gboolean puresignal;
+  PSIGNAL *puresignal;
+  gboolean puresignal_enabled;
   gboolean ps_twotone;
   gboolean ps_feedback;
   gboolean ps_auto;
   gboolean ps_single;
+#ifdef PURESIGNAL
+  RECEIVER *rx_puresignal_txfbk;
+  RECEIVER *rx_puresignal_rxfbk;
+#endif 
   GtkWidget *ps;
   cairo_surface_t *ps_surface;
   gint ps_timer_id;
@@ -181,6 +187,7 @@ extern void transmitter_init_analyzer(TRANSMITTER *tx);
 extern void transmitter_save_state(TRANSMITTER *tx);
 extern void transmitter_restore_state(TRANSMITTER *tx);
 extern void add_mic_sample(TRANSMITTER *tx,float sample);
+extern void add_ps_iq_samples(TRANSMITTER *tx, double i_sample_tx,double q_sample_tx, double i_sample_rx, double q_sample_rx);
 extern void transmitter_set_filter(TRANSMITTER *tx,int low,int high);
 extern void transmitter_set_pre_emphasize(TRANSMITTER *tx,int state);
 extern void transmitter_set_mode(TRANSMITTER *tx,int mode);
@@ -194,6 +201,7 @@ extern void transmitter_set_twotone(TRANSMITTER *tx,gboolean state);
 extern void transmitter_set_ps_sample_rate(TRANSMITTER *tx,int rate);
 
 extern int transmitter_get_mode(TRANSMITTER *tx);
+extern long long transmitter_get_frequency(TRANSMITTER *tx);
 extern void full_tx_buffer(TRANSMITTER *tx, gboolean force_send);
 
 extern void transmitter_enable_eer(TRANSMITTER *tx,gboolean state);

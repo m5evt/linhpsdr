@@ -267,6 +267,7 @@ typedef struct _receiver {
   gulong local_audio_signal_id;
   gulong tx_control_signal_id;
 
+  gboolean show_rx;
   gboolean diversity; 
   gint diversity_hidden_rx;
   gint dmix_id;

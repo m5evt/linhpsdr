@@ -135,7 +135,9 @@ GtkWidget *create_configure_dialog(RADIO *radio,int tab) {
 
   if(radio->can_transmit) {
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook),create_transmitter_dialog(radio->transmitter),gtk_label_new("TX"));
-    gtk_notebook_append_page(GTK_NOTEBOOK(notebook),create_puresignal_dialog(radio->transmitter),gtk_label_new("Pure Signal"));
+    //if(radio->transmitter->puresignal != NULL) {
+      gtk_notebook_append_page(GTK_NOTEBOOK(notebook),create_puresignal_dialog(radio->transmitter),gtk_label_new("Pure Signal"));
+    //}
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook),create_pa_dialog(radio),gtk_label_new("PA"));
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook),create_eer_dialog(radio),gtk_label_new("EER"));
   }

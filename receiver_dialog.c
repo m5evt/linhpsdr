@@ -838,6 +838,11 @@ static void remote_audio_cb(GtkWidget *widget, gpointer data) {
   rx->remote_audio=rx->remote_audio==TRUE?FALSE:TRUE;
 }
 
+static void mute_while_tx_cb(GtkWidget *widget, gpointer data) {
+  RECEIVER *rx=(RECEIVER *)data;
+  rx->mute_while_transmitting = rx->mute_while_transmitting == TRUE?FALSE:TRUE;
+}
+
 static void local_audio_cb(GtkWidget *widget,gpointer data) {
   RECEIVER *rx=(RECEIVER *)data;
   rx->local_audio=gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget));
@@ -1174,6 +1179,7 @@ GtkWidget *create_receiver_dialog(RECEIVER *rx) {
     gtk_grid_attach(GTK_GRID(audio_grid),rx->local_audio_b,0,0,1,1);
     rx->local_audio_signal_id=g_signal_connect(rx->local_audio_b,"toggled",G_CALLBACK(local_audio_cb),rx);
 
+
     if(radio->discovered->device!=DEVICE_HERMES_LITE2
 #ifdef SOAPYSDR
        && radio->discovered->device!=DEVICE_SOAPYSDR
@@ -1189,22 +1195,6 @@ GtkWidget *create_receiver_dialog(RECEIVER *rx) {
     rx->audio_choice_b=gtk_combo_box_text_new();
     gtk_grid_attach(GTK_GRID(audio_grid),rx->audio_choice_b,0,2,2,1);
     rx->audio_choice_signal_id=g_signal_connect(rx->audio_choice_b,"changed",G_CALLBACK(audio_choice_cb),rx);
-    
-    // Audio output device options
-    // TO REMOVE because the variable n_output_devices is always zero here
-    // for(i=0;i<n_output_devices;i++) {
-    //   gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(rx->audio_choice_b),NULL,output_devices[i].description);
-    //   if(rx->audio_name!=NULL) {
-    //     if(strcmp(output_devices[i].name,rx->audio_name)==0) {
-    //       gtk_combo_box_set_active(GTK_COMBO_BOX(rx->audio_choice_b),i);
-    //     }
-    //   }
-    // }
-    
-    // Moved to update_receiver_dialog
-    // if(gtk_combo_box_get_active(GTK_COMBO_BOX(rx->audio_choice_b))==-1) {
-    //   gtk_widget_set_sensitive(rx->local_audio_b, FALSE);
-    // }
 
     // Stereo, left, right audio
     GtkWidget *audio_channels_combo=gtk_combo_box_text_new();
@@ -1214,6 +1204,11 @@ GtkWidget *create_receiver_dialog(RECEIVER *rx) {
     gtk_combo_box_set_active(GTK_COMBO_BOX(audio_channels_combo),rx->audio_channels);
     gtk_grid_attach(GTK_GRID(audio_grid),audio_channels_combo,0,1,2,1);
     g_signal_connect(audio_channels_combo,"changed",G_CALLBACK(audio_channels_cb),rx);
+    
+    GtkWidget *tx_mute_b = gtk_check_button_new_with_label("Mute while TX");
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(tx_mute_b), rx->mute_while_transmitting);
+    gtk_grid_attach(GTK_GRID(audio_grid),tx_mute_b,0,3,1,1);
+    g_signal_connect(tx_mute_b,"toggled",G_CALLBACK(mute_while_tx_cb),rx);
   }
 
   GtkWidget *equalizer_frame=gtk_frame_new("Equalizer");
@@ -1242,6 +1237,7 @@ GtkWidget *create_receiver_dialog(RECEIVER *rx) {
   gtk_grid_attach(GTK_GRID(equalizer_grid),label,3,1,1,1);
 
   GtkWidget *preamp_scale=gtk_scale_new(GTK_ORIENTATION_VERTICAL,gtk_adjustment_new(rx->equalizer[0],-12.0,15.0,1.0,1.0,1.0));
+  gtk_range_set_inverted(GTK_RANGE(preamp_scale),TRUE);
   g_signal_connect(preamp_scale,"value-changed",G_CALLBACK(preamp_value_changed_cb),rx);
   gtk_grid_attach(GTK_GRID(equalizer_grid),preamp_scale,0,2,1,10);
   gtk_widget_set_size_request(preamp_scale,10,270);
@@ -1257,6 +1253,7 @@ GtkWidget *create_receiver_dialog(RECEIVER *rx) {
   gtk_scale_add_mark(GTK_SCALE(preamp_scale),15.0,GTK_POS_LEFT,"15dB");
 
   GtkWidget *low_scale=gtk_scale_new(GTK_ORIENTATION_VERTICAL,gtk_adjustment_new(rx->equalizer[1],-12.0,15.0,1.0,1.0,1.0));
+  gtk_range_set_inverted(GTK_RANGE(low_scale),TRUE);
   g_signal_connect(low_scale,"value-changed",G_CALLBACK(low_value_changed_cb),rx);
   gtk_grid_attach(GTK_GRID(equalizer_grid),low_scale,1,2,1,10);
   gtk_scale_add_mark(GTK_SCALE(low_scale),-12.0,GTK_POS_LEFT,"-12dB");
@@ -1271,6 +1268,7 @@ GtkWidget *create_receiver_dialog(RECEIVER *rx) {
   gtk_scale_add_mark(GTK_SCALE(low_scale),15.0,GTK_POS_LEFT,"15dB");
 
   GtkWidget *mid_scale=gtk_scale_new(GTK_ORIENTATION_VERTICAL,gtk_adjustment_new(rx->equalizer[2],-12.0,15.0,1.0,1.0,1.0));
+  gtk_range_set_inverted(GTK_RANGE(mid_scale),TRUE);
   g_signal_connect(mid_scale,"value-changed",G_CALLBACK(mid_value_changed_cb),rx);
   gtk_grid_attach(GTK_GRID(equalizer_grid),mid_scale,2,2,1,10);
   gtk_scale_add_mark(GTK_SCALE(mid_scale),-12.0,GTK_POS_LEFT,"-12dB");
@@ -1285,6 +1283,7 @@ GtkWidget *create_receiver_dialog(RECEIVER *rx) {
   gtk_scale_add_mark(GTK_SCALE(mid_scale),15.0,GTK_POS_LEFT,"15dB");
 
   GtkWidget *high_scale=gtk_scale_new(GTK_ORIENTATION_VERTICAL,gtk_adjustment_new(rx->equalizer[3],-12.0,15.0,1.0,1.0,1.0));
+  gtk_range_set_inverted(GTK_RANGE(high_scale),TRUE);
   g_signal_connect(high_scale,"value-changed",G_CALLBACK(high_value_changed_cb),rx);
   gtk_grid_attach(GTK_GRID(equalizer_grid),high_scale,3,2,1,10);
   gtk_scale_add_mark(GTK_SCALE(high_scale),-12.0,GTK_POS_LEFT,"-12dB");

@@ -57,8 +57,6 @@ static gboolean running=FALSE;
 
 #define INFO_SIZE 16
 static int info[INFO_SIZE];
-static int old_cor_cnt=0;
-static int state=0;
 static int save_ps_auto;
 static int save_ps_single;
 
@@ -173,71 +171,63 @@ static void update_ps(TRANSMITTER *tx,double pk) {
 }
 
 static gboolean info_timeout(gpointer arg) {
+#ifdef PURESIGNAL
   TRANSMITTER *tx=(TRANSMITTER *)arg;
   double pk;
-
-  if(tx->ps_auto) {
-    tx->attenuation=31;
-  } else {
-    tx->attenuation=0;
-  }
-
+  
   GetPSInfo(tx->channel,&info[0]);
-  double ddb;
-  int newcal=info[COR_CNT]!=old_cor_cnt;
-  old_cor_cnt=info[COR_CNT];
-  switch(state) {
-    case 0:
-      if(tx->ps_auto && newcal && (info[FEEDBACK]>181 || (info[FEEDBACK]<=128 && tx->attenuation>0))) {
-        if(info[FEEDBACK]<=256) {
-          ddb= 20.0 * log10((double)info[4]/152.293);
-          if(isnan(ddb)) {
-            ddb=31.1;
+  
+  if (tx->puresignal == NULL) return FALSE;
+
+  if (tx->puresignal->auto_on) {
+    double fbk_db;
+    int newcal = info[COR_CNT] != tx->puresignal->old_cor_cnt;
+    tx->puresignal->old_cor_cnt = info[COR_CNT];
+
+    int att = ps_get_tx_attenuation(tx->puresignal);
+    
+    switch(tx->puresignal->state) {
+      case 0:
+        if(newcal && ((info[FEEDBACK] > 175 && att < 31) || (info[FEEDBACK]<= 132 && att > 0))) {
+          if(info[FEEDBACK] > 256) {
+            fbk_db = 100;
           }
-          if(ddb<-100.0) {
-            ddb=-100.0;
+          else if (info[FEEDBACK] > 0) {
+            fbk_db = 20.0 * log10((double)info[FEEDBACK] / 152.293);
           }
-          if(ddb > 100.0) {
-            ddb=100.0;
+          else {
+            fbk_db = -100.0;
           }
-        } else {
-          ddb=31.1;
+          fbk_db = (int)lround(fbk_db);
+          ps_change_tx_attenuation(tx->puresignal, fbk_db);
         }
-        deltadb=(int)ddb;
-        save_ps_auto=tx->ps_auto;
-        save_ps_single=tx->ps_single;
+        break;
+      case 1:
+        tx->puresignal->state = 2;
         SetPSControl(tx->channel, 1, 0, 0, 0);
-        state=1;
-      }
-      break;
-    case 1:
-      if((deltadb+tx->attenuation)>0) {
-        tx->attenuation+=deltadb;
-      } else {
-        tx->attenuation=0;
-      }
-      state=2;
-      break;
-    case 2:
-      state=0;
-      SetPSControl(tx->channel, 0, save_ps_single, save_ps_auto, 0);
-      break;
+        break;
+      case 2:
+        tx->puresignal->state = 0;
+        SetPSControl(tx->channel, 0, 0, 1, 0);
+        break;
+    }
   }
   GetPSMaxTX(tx->channel,&pk);
-  update_ps(tx,pk);
+  update_ps(tx, pk);
 
   return running;
+#endif
 }
 
-static void enable_cb(GtkWidget *widget, gpointer data) {
-  TRANSMITTER *tx=(TRANSMITTER *)data;
-  transmitter_set_ps(tx,gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget)));
-}
+//static void enable_cb(GtkWidget *widget, gpointer data) {
+//  TRANSMITTER *tx=(TRANSMITTER *)data;
+//  transmitter_set_ps(tx,gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget)));
+//}
 
 static void twotone_cb(GtkWidget *widget, gpointer data) {
   TRANSMITTER *tx=(TRANSMITTER *)data;
   transmitter_set_twotone(tx,gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget)));
-  if(tx->ps_twotone && tx->puresignal) {
+  if(tx->ps_twotone && (tx->puresignal != NULL)) {
     running=TRUE;
     tx->ps_timer_id=g_timeout_add(100,info_timeout,(gpointer)tx);
   } else {
@@ -264,10 +254,10 @@ GtkWidget *create_puresignal_dialog(TRANSMITTER *tx) {
   gtk_container_add(GTK_CONTAINER(ps_frame),ps_grid);
   gtk_grid_attach(GTK_GRID(grid),ps_frame,col,row++,2,1);
 
-  GtkWidget *enable_b=gtk_check_button_new_with_label("Enable PS");
-  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (enable_b), tx->puresignal);
-  g_signal_connect(enable_b,"toggled",G_CALLBACK(enable_cb),tx);
-  gtk_grid_attach(GTK_GRID(ps_grid),enable_b,0,0,1,1);
+  //GtkWidget *enable_b=gtk_check_button_new_with_label("Enable PS");
+  //gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (enable_b), tx->puresignal_enabled);
+  //g_signal_connect(enable_b,"toggled",G_CALLBACK(enable_cb),tx);
+  //gtk_grid_attach(GTK_GRID(ps_grid),enable_b,0,0,1,1);
 
   GtkWidget *twotone_b=gtk_check_button_new_with_label("Two Tone");
   g_signal_connect(twotone_b,"toggled",G_CALLBACK(twotone_cb),tx);

@@ -626,6 +626,12 @@ void transmitter_save_state(TRANSMITTER *tx) {
   sprintf(name,"transmitter[%d].xit_step",tx->channel);
   sprintf(value,"%ld",tx->xit_step);
   setProperty(name,value);
+  sprintf(name,"transmitter[%d].compressor",tx->channel);
+  sprintf(value,"%i",tx->compressor);
+  setProperty(name,value);
+  sprintf(name,"transmitter[%d].compressor_level",tx->channel);
+  sprintf(value,"%f",tx->compressor_level);
+  setProperty(name,value);
 }
 
 void transmitter_restore_state(TRANSMITTER *tx) {
@@ -762,6 +768,12 @@ void transmitter_restore_state(TRANSMITTER *tx) {
   value=getProperty(name);
   if(value) tx->xit_step=atol(value);
 
+  sprintf(name,"transmitter[%d].compressor",tx->channel);
+  value=getProperty(name);
+  if(value) tx->compressor=atoi(value);
+  sprintf(name,"transmitter[%d].compressor_level",tx->channel);
+  value=getProperty(name);
+  if(value) tx->compressor_level=atof(value);
 }
 
 static gboolean update_timer_cb(void *data) {
@@ -882,13 +894,47 @@ void transmitter_fps_changed(TRANSMITTER *tx) {
   tx->update_timer_id=g_timeout_add(1000/tx->fps,update_timer_cb,(gpointer)tx);
 }
 
+static int ps_end_timer_cb(gpointer data) {
+  g_print("**************Restart P1\n");
+  protocol1_stop();
+  g_idle_add(radio_restart,(void *)radio);
+  return FALSE;
+}
+
 void transmitter_set_ps(TRANSMITTER *tx,gboolean state) {
-  tx->puresignal=state;
+#ifdef PURESIGNAL
   if(state) {
+    //Enable PureSignal
+    if (tx->puresignal == NULL) {
+      tx->puresignal = create_puresignal();
+    }
+
+    for (int i = 0; i < radio->discovered->ps_tx_fdbk_chan; i++) {
+      if (radio->receiver[i] != NULL) {
+        add_receiver(radio, 0);
+      }
+    }
+    tx->rx_puresignal_txfbk = radio->receiver[radio->discovered->ps_tx_fdbk_chan];
+    tx->rx_puresignal_rxfbk = radio->receiver[radio->discovered->ps_tx_fdbk_chan - 1];
+
     SetPSControl(tx->channel, 0, 0, 1, 0);
   } else {
+    // Delete hidden rxs
+    for (int i = 0; i <= (radio->receivers + 1); i++) {
+      if (radio->receiver[i] != NULL) {
+        g_print("RX%i\n", i);
+        if (radio->receiver[i]->show_rx == FALSE) {
+          g_print("Delete RX%i\n", i);
+          delete_receiver(radio->receiver[i]);
+        }
+      }
+    }
+    //Disable PureSignal
+    tx->puresignal = NULL;
     SetPSControl(tx->channel, 1, 0, 0, 0);
+    g_timeout_add(500,ps_end_timer_cb, tx);
   }
+#endif
 }
 
 void transmitter_enable_eer(TRANSMITTER *tx,gboolean state) {
@@ -930,6 +976,7 @@ void transmitter_set_twotone(TRANSMITTER *tx,gboolean state) {
 g_print("transmitter_set_twotone: %d\n",state);
   tx->ps_twotone=state;
   if(state) {
+    SetTXAPostGenTTMag(tx->channel, 0.49, 0.49);
     SetTXAPostGenMode(tx->channel, 1);
     SetTXAPostGenRun(tx->channel, 1);
   } else {
@@ -1043,6 +1090,27 @@ int transmitter_get_mode(TRANSMITTER *tx) {
 #endif    
   }
   return tx_mode;
+}
+
+long long transmitter_get_frequency(TRANSMITTER *tx) {
+  long long f = 0;
+  RECEIVER *rx=radio->transmitter->rx;
+  if(rx!=NULL) {
+    if(rx->split) {
+      f=rx->frequency_b-rx->lo_b+rx->error_b;
+    } else {
+      if(rx->ctun) {
+        f=rx->ctun_frequency-rx->lo_a+rx->error_a;
+      } else {
+        f=rx->frequency_a-rx->lo_a+rx->error_a;
+      }
+    }
+
+    if(radio->transmitter->xit_enabled) {
+      f+=radio->transmitter->xit;
+    }
+  }
+  return f;
 }
 
 #ifdef CWDAEMON
@@ -1352,6 +1420,37 @@ void add_mic_sample(TRANSMITTER *tx,float mic_sample) {
   }
 }
 
+void add_ps_iq_samples(TRANSMITTER *tx, double i_sample_tx,double q_sample_tx, double i_sample_rx, double q_sample_rx) {
+#ifdef PURESIGNAL
+  // DUC/TX feedback
+  tx->rx_puresignal_txfbk->iq_input_buffer[tx->rx_puresignal_txfbk->samples * 2] = i_sample_tx;
+  tx->rx_puresignal_txfbk->iq_input_buffer[(tx->rx_puresignal_txfbk->samples * 2) + 1] = q_sample_tx;
+
+  // Post amplifier/ADC feedback
+  tx->rx_puresignal_rxfbk->iq_input_buffer[tx->rx_puresignal_rxfbk->samples * 2] = i_sample_rx;
+  tx->rx_puresignal_rxfbk->iq_input_buffer[(tx->rx_puresignal_rxfbk->samples * 2) + 1] = q_sample_rx;
+
+  tx->rx_puresignal_rxfbk->samples++;
+  tx->rx_puresignal_txfbk->samples++;
+
+  if(tx->rx_puresignal_txfbk->samples >= tx->rx_puresignal_txfbk->buffer_size) {
+
+    if(isTransmitting(radio)) {
+//      g_print("pscc: size %i sample %i\n", tx->fbk_buffer_size, tx->rx_fbk_sample);
+      pscc(tx->channel, tx->rx_puresignal_txfbk->buffer_size, 
+           tx->rx_puresignal_txfbk->iq_input_buffer, 
+           tx->rx_puresignal_rxfbk->iq_input_buffer);
+//      if(transmitter->displaying && transmitter->feedback) {
+//        Spectrum0(1, rx_feedback->id, 0, 0, rx_feedback->iq_input_buffer);
+//      }
+    }
+  
+    tx->rx_puresignal_rxfbk->samples = 0;
+    tx->rx_puresignal_txfbk->samples = 0;
+  }
+#endif
+}
+
 void transmitter_set_filter(TRANSMITTER *tx,int low,int high) {
 
   gint mode = transmitter_get_mode(tx);
@@ -1620,12 +1719,18 @@ g_print("create_transmitter: channel=%d\n",channel);
   tx->panadapter=NULL;
   tx->panadapter_surface=NULL;
 
-  tx->puresignal=FALSE;
+  tx->puresignal = NULL;
+  tx->puresignal_enabled = FALSE;
   tx->ps_twotone=FALSE;
   tx->ps_feedback=FALSE;
   tx->ps_auto=TRUE;
   tx->ps_single=FALSE;
 
+  #ifdef PURESIGNAL
+  tx->rx_puresignal_txfbk = NULL;
+  tx->rx_puresignal_rxfbk = NULL;
+  #endif
+  
   tx->dialog=NULL;
 
   tx->xit_enabled=FALSE;

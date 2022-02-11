@@ -55,6 +55,10 @@ static void get_info(char *driver) {
     sdrplay_count++;
   }
   SoapySDRDevice *sdr = SoapySDRDevice_make(&args);
+  if(sdr==NULL) {
+    g_print("%s: SoapySdrDevice_make failed\n",__FUNCTION__);
+    return;
+  }
   SoapySDRKwargs_clear(&args);
 
   char *driverkey=SoapySDRDevice_getDriverKey(sdr);
@@ -103,27 +107,17 @@ static void get_info(char *driver) {
   SoapySDRRange *rx_rates=SoapySDRDevice_getSampleRateRange(sdr, SOAPY_SDR_RX, 0, &rx_rates_length);
   fprintf(stderr,"Rx sample rates: ");
   for (size_t i = 0; i < rx_rates_length; i++) {
-    fprintf(stderr,"%f -> %f (%f),", rx_rates[i].minimum, rx_rates[i].maximum, rx_rates[i].minimum/768000.0);
-    if(sample_rate==0) {
-      if(rx_rates[i].minimum==rx_rates[i].maximum) {
-        if(((int)rx_rates[i].minimum%48000)==0) {
-          sample_rate=(int)rx_rates[i].minimum;
-        }
-      } else {
-        if((384000.0>=rx_rates[i].minimum) && (384000<=(int)rx_rates[i].maximum)) {
-          sample_rate=384000;
-        }
-        if((768000.0>=rx_rates[i].minimum) && (768000<=(int)rx_rates[i].maximum)) {
-          sample_rate=768000;
-        }
-      }
-    }
+    fprintf(stderr,"%f -> %f,", rx_rates[i].minimum, rx_rates[i].maximum);
   }
   fprintf(stderr,"\n");
   free(rx_rates);
+  sample_rate=768000;
+  if(strcmp(driver,"rtlsdr")==0) {
+    sample_rate=1536000;
+  }
   fprintf(stderr,"sample_rate selected %d\n",sample_rate);
 
-  SoapySDRRange *tx_rates=SoapySDRDevice_getSampleRateRange(sdr, SOAPY_SDR_TX, 1, &tx_rates_length);
+  SoapySDRRange *tx_rates=SoapySDRDevice_getSampleRateRange(sdr, SOAPY_SDR_TX, 0, &tx_rates_length);
   fprintf(stderr,"Tx sample rates: ");
   for (size_t i = 0; i < tx_rates_length; i++) {
     fprintf(stderr,"%f -> %f (%f),", tx_rates[i].minimum, tx_rates[i].maximum, tx_rates[i].minimum/48000.0);
@@ -176,7 +170,7 @@ static void get_info(char *driver) {
   gboolean has_automatic_dc_offset_correction=SoapySDRDevice_hasDCOffsetMode(sdr, SOAPY_SDR_RX, 0);
   fprintf(stderr,"has_automaic_dc_offset_correction=%d\n",has_automatic_dc_offset_correction);
 
-  char **tx_gains = SoapySDRDevice_listGains(sdr, SOAPY_SDR_TX, 1, &tx_gains_length);
+  char **tx_gains = SoapySDRDevice_listGains(sdr, SOAPY_SDR_TX, 0, &tx_gains_length);
 
   size_t formats_length;
   char **formats = SoapySDRDevice_getStreamFormats(sdr,SOAPY_SDR_RX,0,&formats_length);
@@ -192,11 +186,14 @@ static void get_info(char *driver) {
   char *ptr;
   fprintf(stderr, "Sensors:\n");
   for (size_t i = 0; i < sensors; i++) {
+  /*
     char *value=SoapySDRDevice_readSensor(sdr, sensor[i]);
     fprintf(stderr, "    %s=%s\n", sensor[i],value);
     if((ptr=strstr(sensor[i],"temp"))!=NULL) {
       has_temp=TRUE;
     }
+   */
+   g_print("    %s\n",sensor[i]);
   }
 
   if(devices<MAX_DEVICES) {
@@ -244,7 +241,7 @@ fprintf(stderr,"Rx gains: \n");
 fprintf(stderr,"Tx gains: \n");
     for (size_t i = 0; i < tx_gains_length; i++) {
       fprintf(stderr,"%s ", tx_gains[i]);
-      SoapySDRRange tx_range=SoapySDRDevice_getGainElementRange(sdr, SOAPY_SDR_TX, 1, tx_gains[i]);
+      SoapySDRRange tx_range=SoapySDRDevice_getGainElementRange(sdr, SOAPY_SDR_TX, 0, tx_gains[i]);
       fprintf(stderr,"%f -> %f step=%f\n",tx_range.minimum,tx_range.maximum,tx_range.step);
       discovered[devices].info.soapy.tx_range[i]=tx_range;
     }
@@ -275,11 +272,14 @@ void soapy_discovery() {
   SoapySDRKwargs input_args={};
   SoapySDRKwargs args={};
 
-fprintf(stderr,"soapy_discovery\n");
+  fprintf(stderr,"%s\n",__FUNCTION__);
   SoapySDRKwargs_set(&input_args, "hostname", "pluto.local");
   SoapySDRKwargs *results = SoapySDRDevice_enumerate(&input_args, &length);
+  fprintf(stderr,"%s: length=%ld\n",__FUNCTION__,length);
   for (i = 0; i < length; i++) {
+    fprintf(stderr,"%s: i=%d size=%ld\n",__FUNCTION__,i,results[i].size);
     for (size_t j = 0; j < results[i].size; j++) {
+      fprintf(stderr,"%s key=%s value=%s\n",__FUNCTION__,results[i].keys[j],results[i].vals[j]);
       if(strcmp(results[i].keys[j],"driver")==0 && strcmp(results[i].vals[j],"audio")!=0) {
         get_info(results[i].vals[j]);
       }

@@ -171,6 +171,7 @@ static void update_ps(TRANSMITTER *tx,double pk) {
 }
 
 static gboolean info_timeout(gpointer arg) {
+#ifdef PURESIGNAL
   TRANSMITTER *tx=(TRANSMITTER *)arg;
   double pk;
   
@@ -215,6 +216,7 @@ static gboolean info_timeout(gpointer arg) {
   update_ps(tx, pk);
 
   return running;
+#endif
 }
 
 //static void enable_cb(GtkWidget *widget, gpointer data) {

@@ -56,7 +56,7 @@ endif
 
 # PureSignal adaptive distortion for HPSDR radios 
 # (currently only protocol1)
-PURESIGNAL_INCLUDE=PURESIGNAL
+#PURESIGNAL_INCLUDE=PURESIGNAL
 
 ifeq ($(PURESIGNAL_INCLUDE),PURESIGNAL)
 PURESIGNAL_OPTIONS=-D PURESIGNAL

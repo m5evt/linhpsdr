@@ -1210,6 +1210,7 @@ void DoTheMidi(enum MIDIaction action, enum MIDItype type, int val) {
               keytx = false;
               g_mutex_unlock(&cwdaemon_mutex);
             }
+            cwd_changed_at = read_time_now();
           #endif
           break;
         // TODO: add dit dah and use unixcw built in iambic keyer

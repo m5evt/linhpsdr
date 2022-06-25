@@ -106,6 +106,7 @@
 #define CWDAEMON_TUNE_SECONDS_MAX  10 /* Maximal time of tuning. TODO: why the limitation to 10 s? Is it enough? */
 
 GMutex cwdaemon_mutex;
+static GThread *cwdaemon_thread_id;
 
 bool keytx;
 bool keysidetone;
@@ -1569,7 +1570,6 @@ bool cwdaemon_initialize_socket(void)
 }
 
 void cwdaemon_stop(void) {
-  
   g_mutex_lock(&cwdaemon_mutex); 
   radio->cwdaemon_running = FALSE;
   g_mutex_unlock(&cwdaemon_mutex);   
@@ -1581,12 +1581,24 @@ void cwdaemon_stop(void) {
   g_print("cwd run %d\n", radio->cwdaemon_running);  
 }
 
-void cwdaemon_close_socket(void)
-{
+
+int cwdaemon_start(void) {
+  g_print("Starting CWdaemon\n");
+  cwdaemon_thread_id = g_thread_new("cwdaemon thread...", cwdaemon_thread, (gpointer)radio);
+  int running = TRUE;
+  if(!cwdaemon_thread_id) {
+    fprintf(stderr,"g_thread_new failed on cwdaemon_thread\n");
+    running = FALSE;
+  }
+  fprintf(stderr, "cwdaemon_thread: id=%p\n",cwdaemon_thread_id);    
+  return running;
+}
+
+void cwdaemon_close_socket(void) {
   g_print("Close cwdaemon socket\n");
 	if (radio->socket_descriptor) {
 		if (close(radio->socket_descriptor) == -1) {
-			printf("Close socket\n");
+			g_print("Close socket\n");
 			//exit(EXIT_FAILURE);
 		}
     radio->socket_descriptor = -1;

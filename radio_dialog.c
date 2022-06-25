@@ -579,23 +579,12 @@ static void enable_step_attenuation_cb(GtkWidget *widget,gpointer data) {
 }
 
 #ifdef CWDAEMON
-
-static GThread *cwdaemon_thread_id;
-
-
 static void cwdaemon_cb(GtkWidget *widget, gpointer data) {
   RADIO *radio=(RADIO *)data;
   radio->cwdaemon=gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
-  printf("CWdaemon %d\n", radio->cwdaemon);
   if(radio->cwdaemon) {
     printf("Starting CWdaemon\n");
-    cwdaemon_thread_id = g_thread_new("cwdaemon thread...", cwdaemon_thread, (gpointer)radio);
-    if(!cwdaemon_thread_id)
-    {
-      fprintf(stderr,"g_thread_new failed on cwdaemon_thread\n");
-      exit(-1);
-    }
-    fprintf(stderr, "cwdaemon_thread: id=%p\n",cwdaemon_thread_id);    
+    radio->cwdaemon = cwdaemon_start();
     // CWdaemon now has control over keyer settings, user can't modify
     gtk_widget_set_sensitive(cw_keyer_speed_b, FALSE);    
     gtk_widget_set_sensitive(cw_keyer_sidetone_frequency_b, FALSE);
@@ -612,7 +601,6 @@ static void cwdaemon_cb(GtkWidget *widget, gpointer data) {
     gtk_widget_set_sensitive(cw_keyer_sidetone_level_b, TRUE);    
     gtk_widget_set_sensitive(cw_cwd_sidetone_b, TRUE);  
     gtk_widget_set_sensitive(cwport, TRUE); 
-    //g_thread_exit(cwdaemon_thread_id);
   }
 }
 

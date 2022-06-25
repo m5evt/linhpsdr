@@ -508,7 +508,7 @@ static int midi_action(void *data) {
 	case CWRIGHT: // only key
 //#ifdef LOCALCW
 	    if (type == MIDI_KEY) {
-		new=(action == CWL);
+		//new=(action == CWL);
 		//keyer_event(new,val);
 	    }
 //#endif
@@ -1197,8 +1197,7 @@ void DoTheMidi(enum MIDIaction action, enum MIDItype type, int val) {
     switch (action) {
        case CWRIGHT: // CW straight key
           #ifdef CWDAEMON
-          // CWdaemon must be running to produce the sidetone
-          if (radio->cwdaemon_running == TRUE) {
+         //g_print("CW callback\n");
             if (val) {
               keysidetone = 1;
               g_mutex_lock(&cwdaemon_mutex);
@@ -1211,8 +1210,7 @@ void DoTheMidi(enum MIDIaction action, enum MIDItype type, int val) {
               keytx = false;
               g_mutex_unlock(&cwdaemon_mutex);
             }
-            cw_notify_straight_key_event(keysidetone);
-          }
+            cwd_changed_at = read_time_now();
           #endif
           break;
         // TODO: add dit dah and use unixcw built in iambic keyer

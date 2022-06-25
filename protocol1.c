@@ -866,7 +866,7 @@ static void protocol1_tx_scheduler_monitor(void) {
   
   if (radio->hl2 != NULL) {
     if (radio->protocol1_timer > 20) {
-      //g_print( "tdiff %lf\n", radio->protocol1_timer); 
+      g_print( "tdiff %lf\n", radio->protocol1_timer); 
       radio->hl2->late_packets++;
     }
   }   

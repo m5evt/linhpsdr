@@ -189,6 +189,10 @@ g_print("radio_save_state: %s\n",filename);
   setProperty("radio.cwd_port",value);  
   sprintf(value,"%d",radio->cwd_sidetone);
   setProperty("radio.cwd_sidetone",value);    
+  sprintf(value,"%d",radio->cw_generation_mode);
+  setProperty("radio.cw_generation_mode",value);    
+  sprintf(value,"%d",radio->cwdaemon_running);
+  setProperty("radio.cwdaemon_running",value);    
   #endif
   sprintf(value,"%d",radio->local_microphone);
   setProperty("radio.local_microphone",value);
@@ -383,6 +387,10 @@ void radio_restore_state(RADIO *radio) {
   if(value!=NULL) radio->cwd_sidetone=atoi(value);  
   value=getProperty("radio.cwd_port");
   if(value!=NULL) radio->cwd_port=atoi(value);   
+  value=getProperty("radio.cw_generation_mode");
+  if(value!=NULL) radio->cw_generation_mode = atoi(value);   
+  value=getProperty("radio.cwdaemon_running");
+  if(value!=NULL) radio->cwdaemon_running = atoi(value);   
   #endif  
 
   for(int i=0;i<radio->discovered->adcs;i++) {
@@ -1498,9 +1506,15 @@ g_print("create_radio for %s %d\n",d->name,d->device);
 
   radio_change_region(r);
 
-  #ifdef CWDAEMON
+#ifdef CWDAEMON
   radio_change_cwgeneration(r);
-  #endif
+  // Check if cwdaemon was running when linhpsdr was last closed cleanly (and
+  // thus wrote this to the props file)
+  if (r->cwdaemon_running) {
+    r->cwdaemon_running = FALSE;
+    r->cwdaemon = cwdaemon_start();
+  }
+#endif
 
 #ifdef SOAPYSDR
   if(r->discovered->protocol==PROTOCOL_SOAPYSDR) {

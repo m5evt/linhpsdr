@@ -98,7 +98,7 @@ Development and testing has been run on MacOS Sierra 10.12.6 and MacOS high Sier
   make -f Makefile.mac install
 ```
 
-### To download, compile and install linHPSDR from https://github.com/g0orx/linhpsdr
+### To download, compile and install linHPSDR
 
 ```
   git clone https://github.com/m5evt/linhpsdr.git

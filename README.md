@@ -2,7 +2,7 @@
 
 ### Development environment
 
-Development and testing has been run on Ubuntu 17.10 and Ubuntu 18.04. If run on early versions there may be a problem with GTK not supporting the gtk_menu_popup_at_pointer function vfo.c. For information on MacOS support see [MacOS.md](./MacOS.md).
+Development and testing has been run on Ubuntu and Arch Linux. If run on early versions there may be a problem with GTK not supporting the gtk_menu_popup_at_pointer function vfo.c. For information on MacOS support see [MacOS.md](./MacOS.md).
 
 ### Prerequisites for building
 
@@ -40,8 +40,10 @@ Hermes and HL2 CWX/cwdaemon support added. If you do not wish to use this, pleas
 
 ```
   sudo apt install libtool
-  git clone https://github.com/m5evt/unixcw-3.5.1.git
-  cd unixcw-3.5.1
+  git clone https://git.code.sf.net/p/unixcw/code unixcw-code 
+  cd unixcw-code
+  git fetch --tags
+  git checkout tags/v3.6.0
   autoreconf -i
   ./configure
   make

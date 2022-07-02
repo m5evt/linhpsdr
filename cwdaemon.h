@@ -68,7 +68,7 @@ extern GMutex cwdaemon_mutex;
 
 extern bool keytx;
 extern bool keysidetone;
-double cwd_changed_at;
+extern double cwd_changed_at;
 
 
 extern void cwdaemon_stop(void);

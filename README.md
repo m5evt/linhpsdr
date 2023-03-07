@@ -4,7 +4,7 @@
 
 Development and testing has been run on Ubuntu and Arch Linux. If run on early versions there may be a problem with GTK not supporting the gtk_menu_popup_at_pointer function vfo.c. For information on MacOS support see [MacOS.md](./MacOS.md).
 
-### Prerequisites for building
+### Prerequisites for building (Arch Linux)
 
 ```
   sudo apt-get install libfftw3-dev
@@ -15,7 +15,7 @@ Development and testing has been run on Ubuntu and Arch Linux. If run on early v
   sudo apt-get install libsoapysdr-dev
 ```
 
-### Prerequisites for installing the Debian Package
+### Prerequisites for installing the Debian Package (Arch Linux)
 
 ```
   sudo apt-get install libfftw3-3
@@ -25,6 +25,15 @@ Development and testing has been run on Ubuntu and Arch Linux. If run on early v
   sudo apt-get install libsoapysdr
 ```
 
+### Prerequisites for building and installing (Ubuntu)
+
+```
+  sudo apt-get install libfftw3-3 libfftw3-dev
+  sudo apt-get install libpulse libpulse-dev
+  sudo apt-get install libsoundio2 libsoundio-dev
+  sudo apt-get install libasound2 libasound2-dev
+  sudo apt-get install libsoapysdr0.8 libsoapysdr-dev
+```
 
 ### linhpsdr requires WDSP to be built and installed
 
